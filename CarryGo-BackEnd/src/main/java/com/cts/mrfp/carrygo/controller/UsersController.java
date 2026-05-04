@@ -20,7 +20,7 @@ import com.cts.mrfp.carrygo.util.DTOConverter;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "http://localhost:4200") // allow Angular frontend
+@CrossOrigin(origins = "*") // allow Angular frontend
 public class UsersController {
     private final UsersService usersService;
 
