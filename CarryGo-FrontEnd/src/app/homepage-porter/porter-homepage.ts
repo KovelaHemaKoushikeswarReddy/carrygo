@@ -134,7 +134,7 @@ export class PorterDashboardComponent implements OnInit, OnDestroy, AfterViewIni
 
   private sseSub: Subscription | null = null;
   private pollSub: Subscription | null = null;
-  private readonly apiBase = 'http://localhost:8081/api';
+  private readonly apiBase = '/api';
 
   constructor(
     private userService:    UserService,

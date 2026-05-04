@@ -13,7 +13,7 @@ public class SseController {
 
     /**
      * Clients connect here to receive real-time events.
-     * EventSource in browser: new EventSource('http://localhost:8081/api/sse/subscribe/123')
+     * EventSource in browser: new EventSource('/api/sse/subscribe/123')
      */
     @GetMapping(value = "/subscribe/{userId}", produces = "text/event-stream")
     public SseEmitter subscribe(

@@ -18,7 +18,7 @@ export interface FareEstimate {
 
 @Injectable({ providedIn: 'root' })
 export class FareService {
-  private readonly apiBase = 'http://localhost:8081/api';
+  private readonly apiBase = '/api';
 
   constructor(private http: HttpClient) {}
 

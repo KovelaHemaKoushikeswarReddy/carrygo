@@ -114,7 +114,7 @@ export class PorterKycComponent implements OnInit {
     agreedTerms: false, agreedAccuracy: false
   };
 
-  private readonly apiBase = 'http://localhost:8081/api';
+  private readonly apiBase = '/api';
 
   constructor(
     private authService: AuthService,

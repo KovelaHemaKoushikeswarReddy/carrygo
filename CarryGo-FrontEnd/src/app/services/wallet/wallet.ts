@@ -6,7 +6,7 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class Wallet {
-  private apiUrl = 'http://localhost:8081/api/wallets';
+  private apiUrl = '/api/wallets';
 
   constructor(private http: HttpClient) {}
 

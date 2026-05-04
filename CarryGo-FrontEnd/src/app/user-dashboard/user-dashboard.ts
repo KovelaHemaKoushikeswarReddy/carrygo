@@ -210,7 +210,7 @@ export class UserDashboard implements OnInit, OnDestroy {
   private inlineMapInstance: any = null;
   private leafletLib: any = null;
 
-  private readonly apiBase = 'http://localhost:8081/api';
+  private readonly apiBase = '/api';
 
   constructor(
     private authService:          AuthService,

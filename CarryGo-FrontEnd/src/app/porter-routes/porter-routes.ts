@@ -46,7 +46,7 @@ export class PorterRoutesComponent implements OnInit, OnDestroy, AfterViewChecke
   private leafletLib: any       = null;
   private mapNeedsInit          = false;
 
-  private readonly apiBase = 'http://localhost:8081/api';
+  private readonly apiBase = '/api';
 
   constructor(
     private authService: AuthService,

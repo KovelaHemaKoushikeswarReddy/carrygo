@@ -96,7 +96,7 @@ export class PorterProfileComponent implements OnInit {
     flexibleSchedule: true,
   };
 
-  private readonly apiBase = 'http://localhost:8081/api';
+  private readonly apiBase = '/api';
 
   constructor(
     private authService: AuthService,
