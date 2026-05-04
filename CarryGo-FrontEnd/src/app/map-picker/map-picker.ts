@@ -134,8 +134,11 @@ export class MapPickerComponent implements OnInit, AfterViewInit, OnChanges, OnD
 
   /* ─────────────── Map init ─────────────── */
 
-  private fixLeafletIcons(): void {
+ private fixLeafletIcons(): void {
+  if (!L || !L.Icon || !L.Icon.Default) return;
+
   delete (L.Icon.Default.prototype as any)._getIconUrl;
+
   L.Icon.Default.mergeOptions({
     iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
     iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -285,9 +288,17 @@ export class MapPickerComponent implements OnInit, AfterViewInit, OnChanges, OnD
           this.durationMin = Math.round(route.duration  / 60);
 
           if (this.routeLayer) this.routeLayer.remove();
-          this.routeLayer = L.geoJSON(route.geometry, {
-            style: { color: '#f97316', weight: 5, opacity: 0.75, dashArray: '' },
-          }).addTo(this.map);
+          const coords = route.geometry.coordinates.map((c: any) => [c[1], c[0]]);
+
+if (this.routeLayer) this.routeLayer.remove();
+
+this.routeLayer = L.polyline(coords, {
+  color: '#f97316',
+  weight: 5,
+  opacity: 0.75
+}).addTo(this.map);
+
+this.map.fitBounds(this.routeLayer.getBounds(), { padding: [50, 50] });
           this.map.fitBounds(this.routeLayer.getBounds(), { padding: [50, 50] });
         }
         this.isRouting = false;
