@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("https://carrygo-production.up.railway.app/api/intercity")
+@RequestMapping("/api/intercity")
 @CrossOrigin(origins = "*")
 public class IntercityCourierController {
 
