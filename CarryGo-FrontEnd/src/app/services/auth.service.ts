@@ -8,7 +8,7 @@ import { isPlatformBrowser } from '@angular/common';
   providedIn: 'root'
 })
 export class AuthService {
-  private baseUrl = 'https://carrygo-production.up.railway.app/api/users';
+  private baseUrl = 'http://localhost:8081/api/users';
   private currentUserSubject = new BehaviorSubject<any>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 

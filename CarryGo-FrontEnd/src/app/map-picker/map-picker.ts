@@ -1,4 +1,3 @@
-import * as L from 'leaflet';
 import {
   Component, EventEmitter, Output, OnInit, OnDestroy, OnChanges, SimpleChanges,
   AfterViewInit, Input, ViewChild, ElementRef, Inject, PLATFORM_ID, ChangeDetectorRef, NgZone
@@ -8,7 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
-
+ 
 export interface MapPickerResult {
   pickupAddress: string;
   pickupLat:     number;
@@ -19,7 +18,7 @@ export interface MapPickerResult {
   distanceKm:    number;
   durationMin:   number;
 }
-
+ 
 @Component({
   selector: 'app-map-picker',
   standalone: true,
@@ -28,40 +27,41 @@ export interface MapPickerResult {
   styleUrl:    './map-picker.css',
 })
 export class MapPickerComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
-
+ 
   /** Parent controls visibility — no *ngIf needed on the host */
   @Input() isOpen = false;
-
+ 
   @Output() confirmed = new EventEmitter<MapPickerResult>();
   @Output() cancelled = new EventEmitter<void>();
-
+ 
   @ViewChild('mapEl') mapElRef!: ElementRef<HTMLDivElement>;
-
+ 
   /* ── Phase ── */
   phase: 'pickup' | 'drop' = 'pickup';
-
+ 
   /* ── Pickup ── */
   pickupAddress = '';
   pickupLat?: number;
   pickupLng?: number;
-
+ 
   /* ── Drop ── */
   dropAddress = '';
   dropLat?: number;
   dropLng?: number;
-
+ 
   /* ── Route info ── */
   distanceKm  = 0;
   durationMin = 0;
   isRouting   = false;
-
+ 
   /* ── Search ── */
   searchQuery   = '';
   suggestions:  any[] = [];
   isSearching   = false;
   showSuggestions = false;
-
+ 
   /* ── Leaflet internals (any — loaded dynamically) ── */
+  private L:              any;
   private map:            any;
   private pickupMarker:   any;
   private dropMarker:     any;
@@ -69,17 +69,17 @@ export class MapPickerComponent implements OnInit, AfterViewInit, OnChanges, OnD
   private mapReady        = false;
   private leafletLoaded   = false;
   private pendingMapInit  = false;
-
+ 
   private searchSubject = new Subject<string>();
   private subs: Subscription[] = [];
-
+ 
   constructor(
     private http:     HttpClient,
     private cdr:      ChangeDetectorRef,
     private zone:     NgZone,
     @Inject(PLATFORM_ID) private platformId: Object,
   ) {}
-
+ 
   ngOnInit(): void {
     const sub = this.searchSubject.pipe(
       debounceTime(350),
@@ -90,10 +90,11 @@ export class MapPickerComponent implements OnInit, AfterViewInit, OnChanges, OnD
     });
     this.subs.push(sub);
   }
-
- ngAfterViewInit(): void {
-  if (!isPlatformBrowser(this.platformId)) return;
-  this.fixLeafletIcons();
+ 
+  async ngAfterViewInit(): Promise<void> {
+    if (!isPlatformBrowser(this.platformId)) return;
+    this.L = await import('leaflet');
+    this.fixLeafletIcons();
     this.leafletLoaded = true;
     // DO NOT call initMap() here — the container is hidden (display:none via [hidden]="!isOpen")
     // and Leaflet cannot calculate the map size on a zero-dimension element.
@@ -104,7 +105,7 @@ export class MapPickerComponent implements OnInit, AfterViewInit, OnChanges, OnD
       setTimeout(() => { this.initMap(); this.mapReady = true; }, 50);
     }
   }
-
+ 
   ngOnChanges(changes: SimpleChanges): void {
     if (!changes['isOpen']) return;
     const nowOpen: boolean = changes['isOpen'].currentValue;
@@ -131,34 +132,31 @@ export class MapPickerComponent implements OnInit, AfterViewInit, OnChanges, OnD
       }
     }
   }
-
+ 
   /* ─────────────── Map init ─────────────── */
-
- private fixLeafletIcons(): void {
-  if (!L || !L.Icon || !L.Icon.Default) return;
-
-  delete (L.Icon.Default.prototype as any)._getIconUrl;
-
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
-  });
-}
-
+ 
+  private fixLeafletIcons(): void {
+    delete (this.L.Icon.Default.prototype as any)._getIconUrl;
+    this.L.Icon.Default.mergeOptions({
+      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+      iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    });
+  }
+ 
   private initMap(): void {
     if (!this.mapElRef?.nativeElement) return;
-    this.map = L.map(this.mapElRef.nativeElement, {
+    this.map = this.L.map(this.mapElRef.nativeElement, {
       center:      [20.5937, 78.9629],
       zoom:        5,
       zoomControl: true,
     });
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+ 
+    this.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
       maxZoom: 19,
     }).addTo(this.map);
-
+ 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         pos => {
@@ -169,15 +167,15 @@ export class MapPickerComponent implements OnInit, AfterViewInit, OnChanges, OnD
         { timeout: 5000 },
       );
     }
-
+ 
     this.map.on('click', (e: any) => {
       const { lat, lng } = e.latlng;
       this.zone.run(() => this.handleMapClick(lat, lng));
     });
   }
-
+ 
   /* ─────────────── Reset state ─────────────── */
-
+ 
   private resetState(): void {
     this.phase = 'pickup';
     if (this.pickupMarker) { this.pickupMarker.remove(); this.pickupMarker = null; }
@@ -190,9 +188,9 @@ export class MapPickerComponent implements OnInit, AfterViewInit, OnChanges, OnD
     this.clearSearch();
     this.cdr.detectChanges();
   }
-
+ 
   /* ─────────────── Map click / marker placement ─────────────── */
-
+ 
   private async handleMapClick(lat: number, lng: number): Promise<void> {
     const isPickup  = this.phase === 'pickup';
     const tempAddr  = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
@@ -211,7 +209,7 @@ export class MapPickerComponent implements OnInit, AfterViewInit, OnChanges, OnD
     }
     this.cdr.detectChanges();
   }
-
+ 
   private applyPickup(lat: number, lng: number, address: string): void {
     this.pickupLat = lat;
     this.pickupLng = lng;
@@ -222,7 +220,7 @@ export class MapPickerComponent implements OnInit, AfterViewInit, OnChanges, OnD
     if (this.dropLat !== undefined) this.fetchRoute();
     this.cdr.detectChanges();
   }
-
+ 
   private applyDrop(lat: number, lng: number, address: string): void {
     this.dropLat = lat;
     this.dropLng = lng;
@@ -232,46 +230,46 @@ export class MapPickerComponent implements OnInit, AfterViewInit, OnChanges, OnD
     if (this.pickupLat !== undefined) this.fetchRoute();
     this.cdr.detectChanges();
   }
-
+ 
   private placeMarker(type: 'pickup' | 'drop', lat: number, lng: number): void {
     if (type === 'pickup') {
       if (this.pickupMarker) this.pickupMarker.remove();
-      this.pickupMarker = L.marker([lat, lng], { icon: this.dotIcon('#22c55e') })
+      this.pickupMarker = this.L.marker([lat, lng], { icon: this.dotIcon('#22c55e') })
         .addTo(this.map)
         .bindPopup('<b>📍 Pickup</b>').openPopup();
     } else {
       if (this.dropMarker) this.dropMarker.remove();
-      this.dropMarker = L.marker([lat, lng], { icon: this.dotIcon('#f97316') })
+      this.dropMarker = this.L.marker([lat, lng], { icon: this.dotIcon('#f97316') })
         .addTo(this.map)
         .bindPopup('<b>🏁 Drop-off</b>').openPopup();
     }
   }
-
+ 
   private dotIcon(color: string): any {
-    return L.divIcon({
+    return this.L.divIcon({
       className: '',
       html: `
-        <div style="position:relative;width:24px;height:24px;">
-          <div style="
+<div style="position:relative;width:24px;height:24px;">
+<div style="
             position:absolute;top:2px;left:2px;
             width:20px;height:20px;border-radius:50%;
             background:${color};border:3px solid #fff;
             box-shadow:0 2px 10px rgba(0,0,0,0.35);">
-          </div>
-          <div style="
+</div>
+<div style="
             position:absolute;top:-2px;left:-2px;
             width:28px;height:28px;border-radius:50%;
             background:${color};opacity:0.25;
             animation:mapPulse 1.8s ease-in-out infinite;">
-          </div>
-        </div>`,
+</div>
+</div>`,
       iconSize:   [24, 24],
       iconAnchor: [12, 12],
     });
   }
-
+ 
   /* ─────────────── OSRM Routing ─────────────── */
-
+ 
   private fetchRoute(): void {
     if (this.pickupLat === undefined || this.dropLat === undefined) return;
     this.isRouting = true;
@@ -279,26 +277,18 @@ export class MapPickerComponent implements OnInit, AfterViewInit, OnChanges, OnD
       `https://router.project-osrm.org/route/v1/driving/` +
       `${this.pickupLng},${this.pickupLat};${this.dropLng},${this.dropLat}` +
       `?overview=full&geometries=geojson`;
-
+ 
     this.http.get<any>(url).subscribe({
       next: res => {
         if (res?.routes?.length) {
           const route = res.routes[0];
           this.distanceKm  = Math.round(route.distance / 100) / 10;
           this.durationMin = Math.round(route.duration  / 60);
-
+ 
           if (this.routeLayer) this.routeLayer.remove();
-          const coords = route.geometry.coordinates.map((c: any) => [c[1], c[0]]);
-
-if (this.routeLayer) this.routeLayer.remove();
-
-this.routeLayer = L.polyline(coords, {
-  color: '#f97316',
-  weight: 5,
-  opacity: 0.75
-}).addTo(this.map);
-
-this.map.fitBounds(this.routeLayer.getBounds(), { padding: [50, 50] });
+          this.routeLayer = this.L.geoJSON(route.geometry, {
+            style: { color: '#f97316', weight: 5, opacity: 0.75, dashArray: '' },
+          }).addTo(this.map);
           this.map.fitBounds(this.routeLayer.getBounds(), { padding: [50, 50] });
         }
         this.isRouting = false;
@@ -307,19 +297,19 @@ this.map.fitBounds(this.routeLayer.getBounds(), { padding: [50, 50] });
       error: () => { this.isRouting = false; this.cdr.detectChanges(); },
     });
   }
-
+ 
   /* ─────────────── Nominatim Search ─────────────── */
-
+ 
   onSearchInput(q: string): void {
     this.searchSubject.next(q);
   }
-
+ 
   private runSearch(query: string): void {
     this.isSearching = true;
     const url =
       `https://nominatim.openstreetmap.org/search` +
       `?q=${encodeURIComponent(query)}&format=json&limit=6&addressdetails=1&countrycodes=in`;
-
+ 
     this.http.get<any[]>(url, { headers: { 'Accept-Language': 'en' } }).subscribe({
       next: results => {
         this.suggestions    = results;
@@ -330,7 +320,7 @@ this.map.fitBounds(this.routeLayer.getBounds(), { padding: [50, 50] });
       error: () => { this.isSearching = false; this.cdr.detectChanges(); },
     });
   }
-
+ 
   selectSuggestion(s: any): void {
     const lat  = parseFloat(s.lat);
     const lng  = parseFloat(s.lon);
@@ -341,13 +331,13 @@ this.map.fitBounds(this.routeLayer.getBounds(), { padding: [50, 50] });
       ? this.applyPickup(lat, lng, addr)
       : this.applyDrop(lat, lng, addr);
   }
-
+ 
   closeSuggestions(): void {
     setTimeout(() => { this.showSuggestions = false; this.cdr.detectChanges(); }, 180);
   }
-
+ 
   /* ─────────────── Reverse geocode ─────────────── */
-
+ 
   private async reverseGeocode(lat: number, lng: number): Promise<string> {
     try {
       const res: any = await this.http.get<any>(
@@ -359,14 +349,14 @@ this.map.fitBounds(this.routeLayer.getBounds(), { padding: [50, 50] });
       return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
     }
   }
-
+ 
   /* ─────────────── Reset / Phase switch ─────────────── */
-
+ 
   switchPhase(p: 'pickup' | 'drop'): void {
     this.phase = p;
     this.clearSearch();
   }
-
+ 
   resetPickup(): void {
     if (this.pickupMarker) { this.pickupMarker.remove(); this.pickupMarker = null; }
     this.pickupLat = this.pickupLng = undefined;
@@ -375,7 +365,7 @@ this.map.fitBounds(this.routeLayer.getBounds(), { padding: [50, 50] });
     this.clearRoute();
     this.cdr.detectChanges();
   }
-
+ 
   resetDrop(): void {
     if (this.dropMarker) { this.dropMarker.remove(); this.dropMarker = null; }
     this.dropLat = this.dropLng = undefined;
@@ -384,41 +374,41 @@ this.map.fitBounds(this.routeLayer.getBounds(), { padding: [50, 50] });
     this.clearRoute();
     this.cdr.detectChanges();
   }
-
+ 
   private clearRoute(): void {
     if (this.routeLayer) { this.routeLayer.remove(); this.routeLayer = null; }
     this.distanceKm = 0;
     this.durationMin = 0;
   }
-
+ 
   private clearSearch(): void {
     this.searchQuery    = '';
     this.suggestions    = [];
     this.showSuggestions = false;
   }
-
+ 
   /* ─────────────── Format helpers ─────────────── */
-
+ 
   shortAddress(addr: string): string {
     if (!addr) return '';
     const parts = addr.split(',');
     return parts.slice(0, 2).join(',').trim();
   }
-
+ 
   formatDuration(min: number): string {
     if (min < 60) return `${min} min`;
     const h = Math.floor(min / 60);
     const m = min % 60;
     return m ? `${h}h ${m}m` : `${h}h`;
   }
-
+ 
   estimatedFare(): number {
     const base = 40, perKm = 8, fee = 15;
     return Math.round(base + this.distanceKm * perKm + fee);
   }
-
+ 
   /* ─────────────── Confirm / Cancel ─────────────── */
-
+ 
   get canConfirm(): boolean {
     return (
       this.pickupLat !== undefined &&
@@ -426,7 +416,7 @@ this.map.fitBounds(this.routeLayer.getBounds(), { padding: [50, 50] });
       this.distanceKm > 0
     );
   }
-
+ 
   confirm(): void {
     if (!this.canConfirm) return;
     this.confirmed.emit({
@@ -440,9 +430,9 @@ this.map.fitBounds(this.routeLayer.getBounds(), { padding: [50, 50] });
       durationMin:   this.durationMin,
     });
   }
-
+ 
   cancel(): void { this.cancelled.emit(); }
-
+ 
   ngOnDestroy(): void {
     this.subs.forEach(s => s.unsubscribe());
     if (this.map) this.map.remove();

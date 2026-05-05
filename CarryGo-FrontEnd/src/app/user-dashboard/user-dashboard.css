@@ -642,11 +642,12 @@
   font-weight: 600;
   white-space: nowrap;
 }
-.status-pending   { background: #fef3c7; color: #92400e; }
-.status-accepted  { background: #dbeafe; color: #1e40af; }
-.status-transit   { background: #e0f4ee; color: #1e40af; }
-.status-delivered { background: #dcfce7; color: #14532d; }
-.status-cancelled { background: #fee2e2; color: #991b1b; }
+.status-pending    { background: #fef3c7; color: #92400e; }
+.status-accepted   { background: #dbeafe; color: #1e40af; }
+.status-transit    { background: #e0f4ee; color: #1e40af; }
+.status-delivered  { background: #dcfce7; color: #14532d; }
+.status-cancelled  { background: #fee2e2; color: #991b1b; }
+.status-scheduled  { background: #f3e8ff; color: #6b21a8; }
 
 /* ════════════════════ DELIVERIES PAGE ════════════════════ */
 .deliveries-page { display: flex; flex-direction: column; gap: 16px; }
@@ -684,6 +685,7 @@
 .del-id { font-size: 12px; color: #aaa; font-weight: 500; }
 .del-route { font-size: 14px; font-weight: 600; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .del-meta  { font-size: 12px; color: #888; margin-top: 2px; }
+.del-scheduled-info { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #6b21a8; margin-top: 4px; font-weight: 500; }
 
 .del-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
 .del-amount { font-size: 15px; font-weight: 700; color: #1a1a1a; }
@@ -1742,6 +1744,11 @@
 .fare-error-row {
   display: flex; align-items: center; gap: 6px;
   font-size: 0.78rem; color: #ef4444; margin-bottom: 6px;
+}
+.wallet-topup-link {
+  background: none; border: none; padding: 0; margin-left: auto;
+  font-size: 0.78rem; color: #2563eb; cursor: pointer; text-decoration: underline;
+  white-space: nowrap;
 }
 .location-error-row {
   color: #b45309; background: #fffbeb; border: 1px solid #fde68a;

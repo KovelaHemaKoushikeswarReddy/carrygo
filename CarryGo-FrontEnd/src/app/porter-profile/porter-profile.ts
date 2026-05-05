@@ -8,6 +8,7 @@ import { catchError } from 'rxjs/operators';
 import { AuthService } from '../services/auth.service';
 import { UserService } from '../services/user-service';
 import { PorterStatusService } from '../services/porter-status.service';
+import { PorterPendingOrdersService } from '../services/porter-pending-orders.service';
 
 interface PorterProfile {
   userId: number;
@@ -62,8 +63,8 @@ export class PorterProfileComponent implements OnInit {
   earningsToday = 0;
   showProfileDropdown = false;
   showNotifPanel = false;
-  orderRequests: any[] = [];
-  notificationCount = 0;
+  get orderRequests(): any[]      { return this.pendingOrders.orders; }
+  get notificationCount(): number { return this.pendingOrders.count; }
 
   // Profile data
   profile: PorterProfile | null = null;
@@ -96,7 +97,7 @@ export class PorterProfileComponent implements OnInit {
     flexibleSchedule: true,
   };
 
-  private readonly apiBase = 'https://carrygo-production.up.railway.app/api';
+  private readonly apiBase = 'http://localhost:8081/api';
 
   constructor(
     private authService: AuthService,
@@ -105,6 +106,7 @@ export class PorterProfileComponent implements OnInit {
     private route: ActivatedRoute,
     private http: HttpClient,
     private statusService: PorterStatusService,
+    private pendingOrders: PorterPendingOrdersService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -124,7 +126,7 @@ export class PorterProfileComponent implements OnInit {
         this.profile = p;
         this.statusService.init(p.userId);
         this.generateInitials(p.name);
-        this.loadPendingOrders(p.userId);
+        this.pendingOrders.load(p.userId);
         this.cdr.detectChanges();
         if (!paramId) {
           this.loadAllData(p.userId);
@@ -306,14 +308,9 @@ export class PorterProfileComponent implements OnInit {
 
   toggleNotifPanel(): void { this.showNotifPanel = !this.showNotifPanel; this.showProfileDropdown = false; }
 
-  loadPendingOrders(userId: number): void {
-    this.http.get<any[]>(`${this.apiBase}/deliveries/matched/${userId}`)
-      .pipe(catchError(() => of([] as any[])))
-      .subscribe(orders => {
-        this.orderRequests = orders.filter(o => o.pickupAddress?.trim() && o.dropAddress?.trim());
-        this.notificationCount = this.orderRequests.length;
-        this.cdr.detectChanges();
-      });
+  goToDashboard(): void {
+    const uid = this.profile?.userId;
+    if (uid) this.router.navigate(['/porter-dashboard', uid]);
   }
 
   closeModals(): void { this.showEditPersonal = false; this.showEditVehicle = false; }

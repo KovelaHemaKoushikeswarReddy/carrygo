@@ -3,6 +3,7 @@ package com.cts.mrfp.carrygo.controller;
 
 import com.cts.mrfp.carrygo.model.Deliveries;
 import com.cts.mrfp.carrygo.model.Users;
+import java.time.LocalDate;
 import com.cts.mrfp.carrygo.dto.DeliveriesDTO;
 import com.cts.mrfp.carrygo.repository.UsersRepository;
 import com.cts.mrfp.carrygo.service.DeliveriesService;
@@ -48,7 +49,9 @@ public class DeliveriesController {
         delivery.setPackageSize(deliveryDTO.getPackageSize());
         delivery.setSpecialInstructions(deliveryDTO.getSpecialInstructions());
         delivery.setDeliveryType(deliveryDTO.getDeliveryType());
-        delivery.setPreferredDate(deliveryDTO.getPreferredDate());
+        String prefDateStr = deliveryDTO.getPreferredDate();
+        delivery.setPreferredDate(prefDateStr != null && !prefDateStr.isBlank()
+                ? LocalDate.parse(prefDateStr) : null);
         delivery.setPreferredTime(deliveryDTO.getPreferredTime());
         delivery.setFlexibleMatching(deliveryDTO.getFlexibleMatching());
         delivery.setDistanceKm(deliveryDTO.getDistanceKm());

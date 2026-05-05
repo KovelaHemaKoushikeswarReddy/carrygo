@@ -19,7 +19,6 @@
           "options": {
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
-            "outputPath": "dist/carrygo-frontend",
             "assets": [
               {
                 "glob": "**/*",
@@ -30,23 +29,27 @@
               "src/styles.css",
                "node_modules/leaflet/dist/leaflet.css"
             ],
-            
+            "server": "src/main.server.ts",
+            "outputMode": "server",
             "security": {
               "allowedHosts": []
             },
+            "ssr": {
+              "entry": "src/server.ts"
+            }
           },
           "configurations": {
             "production": {
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "2MB",
-                  "maximumError": "5MB"
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "50kB",
-                  "maximumError": "100kB"
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
                 }
               ],
               "outputHashing": "all"
@@ -78,3 +81,4 @@
     }
   }
 }
+ 

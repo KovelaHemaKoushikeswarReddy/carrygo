@@ -113,6 +113,7 @@ export class UserDashboard implements OnInit, OnDestroy {
   distanceCost    = 0;
   serviceFee      = 0;
   isSubmitting    = false;
+  walletError     = '';
   bookingStep: BookingStep = 'idle';
 
   /* ── Surge confirmation (Feature 1) ── */
@@ -210,7 +211,7 @@ export class UserDashboard implements OnInit, OnDestroy {
   private inlineMapInstance: any = null;
   private leafletLib: any = null;
 
-  private readonly apiBase = 'https://carrygo-production.up.railway.app/api';
+  private readonly apiBase = 'http://localhost:8081/api';
 
   constructor(
     private authService:          AuthService,
@@ -323,9 +324,10 @@ export class UserDashboard implements OnInit, OnDestroy {
         this.extractRecentLocations(deliveries);
         this.loadRatedDeliveries();
         // Bug 3 fix: restore broadcast bar after reload if there's an active PENDING order
+        // Only show the broadcast bar for immediately-dispatched deliveries, not future-scheduled ones
         if (this.bookingStep !== 'booked') {
           const pending = deliveries.find((d: any) =>
-            (d.status || '').toUpperCase() === 'PENDING');
+            (d.status || '').toUpperCase() === 'PENDING' && !this.isScheduledFuture(d));
           if (pending) {
             this.bookingStep     = 'booked';
             this.activeBookingId = pending.deliveryId ?? null;
@@ -448,6 +450,7 @@ export class UserDashboard implements OnInit, OnDestroy {
             this.serviceFee     = est.timeFare + est.zoneSurcharge;
             this.estimatedPrice = est.totalFare;
             this.fareError      = '';
+            this.walletError    = '';
             this.showPriceCard  = true;
             this.bookingStep    = 'estimated';
           } else {
@@ -527,6 +530,15 @@ export class UserDashboard implements OnInit, OnDestroy {
     if (this.isSubmitting || !this.user.userId) return;
     if (!this.pickupAddress.trim() || !this.dropAddress.trim()) return;
 
+    const required = this.fareEstimate?.totalFare ?? this.estimatedPrice ?? 0;
+    const balance  = this.wallet?.balance ?? 0;
+    if (balance < required) {
+      this.walletError = `Insufficient balance — you need ₹${required.toFixed(0)} but have ₹${balance.toFixed(0)}. Please add money to your wallet.`;
+      this.cdr.detectChanges();
+      return;
+    }
+    this.walletError = '';
+
     this.isSubmitting = true;
 
     const payload: any = {
@@ -586,7 +598,7 @@ export class UserDashboard implements OnInit, OnDestroy {
     this.packageType = ''; this.weightKg = 1;
     this.receiverName = this.receiverPhone = this.specialInstructions = '';
     this.showPriceCard = false; this.estimatedPrice = 0;
-    this.fareEstimate = null; this.fareError = ''; this.locationError = '';
+    this.fareEstimate = null; this.fareError = ''; this.locationError = ''; this.walletError = '';
     this.bookingStep = 'idle';
     this.broadcastState = null; this.activeBookingId = null;
   }
@@ -738,9 +750,63 @@ export class UserDashboard implements OnInit, OnDestroy {
     }
   }
 
+  // ── Scheduled delivery helpers ──────────────────────────────────────────
+
+  isScheduledFuture(d: any): boolean {
+    if (!d.preferredDate) return false;
+    // If totalPool is already set the delivery has been dispatched to porters
+    if (d.totalPool !== null && d.totalPool !== undefined) return false;
+    const dt = this.getScheduledDateTime(d);
+    return dt !== null && dt > new Date();
+  }
+
+  private getScheduledDateTime(d: any): Date | null {
+    if (!d.preferredDate) return null;
+    let dateStr: string;
+    if (Array.isArray(d.preferredDate)) {
+      const [y, mo, day] = d.preferredDate as number[];
+      dateStr = `${y}-${String(mo).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    } else {
+      dateStr = String(d.preferredDate).substring(0, 10);
+    }
+    const timeStr = d.preferredTime ? String(d.preferredTime).substring(0, 5) : '00:00';
+    return new Date(`${dateStr}T${timeStr}:00`);
+  }
+
+  formatScheduledDate(d: any): string {
+    const dt = this.getScheduledDateTime(d);
+    if (!dt) return '';
+    const label = dt.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+    return d.preferredTime ? `${label} at ${d.preferredTime}` : label;
+  }
+
+  getDeliveryStatusLabel(d: any): string {
+    const status = (d.status || '').toUpperCase();
+    if (status === 'PENDING' && this.isScheduledFuture(d)) return 'Scheduled';
+    return this.getStatusLabel(status);
+  }
+
+  getDeliveryStatusClass(d: any): string {
+    const status = (d.status || '').toUpperCase();
+    if (status === 'PENDING' && this.isScheduledFuture(d)) return 'status-scheduled';
+    return this.getStatusClass(status);
+  }
+
+  // ── Active / scheduled delivery lists ─────────────────────────────────────
+
   getActiveDeliveries(): any[] {
+    return this.deliveries.filter(d => {
+      const status = (d.status || '').toUpperCase();
+      if (!['PENDING', 'ACCEPTED', 'ARRIVED_AT_PICKUP', 'PICKED_UP'].includes(status)) return false;
+      // Future-scheduled deliveries are not yet "live" — keep them out of live tracking
+      if (status === 'PENDING' && this.isScheduledFuture(d)) return false;
+      return true;
+    });
+  }
+
+  getScheduledDeliveries(): any[] {
     return this.deliveries.filter(d =>
-      ['PENDING', 'ACCEPTED', 'ARRIVED_AT_PICKUP', 'PICKED_UP'].includes((d.status || '').toUpperCase())
+      (d.status || '').toUpperCase() === 'PENDING' && this.isScheduledFuture(d)
     );
   }
 

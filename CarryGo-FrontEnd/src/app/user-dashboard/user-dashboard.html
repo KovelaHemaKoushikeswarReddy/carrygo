@@ -446,6 +446,14 @@
               {{ fareLoading ? 'Fetching fare…' : 'Get Price Estimate' }}
             </button>
 
+            <div class="fare-error-row" *ngIf="walletError">
+              <svg width="13" height="13" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 8v4M12 16h.01"/>
+              </svg>
+              {{ walletError }}
+              <button class="wallet-topup-link" (click)="setSection('wallet')">Add money →</button>
+            </div>
+
             <button
               *ngIf="bookingStep === 'estimated'"
               class="btn-primary"
@@ -531,7 +539,7 @@
                   </svg>
                   <span class="track-to">{{ d.dropAddress | slice:0:20 }}…</span>
                 </div>
-                <span class="status-badge" [ngClass]="getStatusClass(d.status)">{{ getStatusLabel(d.status) }}</span>
+                <span class="status-badge" [ngClass]="getDeliveryStatusClass(d)">{{ getDeliveryStatusLabel(d) }}</span>
                 <!-- OTP strip — hidden by default, tap lock icon to reveal -->
                 <div class="track-otp-row"
                      *ngIf="!['DELIVERED','CANCELLED'].includes((d.status||'').toUpperCase()) && d.otp"
@@ -567,6 +575,33 @@
             </div>
           </div>
 
+          <!-- Upcoming scheduled deliveries panel -->
+          <div class="active-tracker scheduled-tracker" *ngIf="getScheduledDeliveries().length > 0">
+            <div class="qa-header">
+              <svg width="13" height="13" fill="none" stroke="#7c3aed" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span style="color:#6b21a8;font-weight:600;">Upcoming Scheduled</span>
+            </div>
+            <div class="track-list">
+              <div *ngFor="let d of getScheduledDeliveries()" class="track-item">
+                <div class="track-route">
+                  <span class="track-from">{{ d.pickupAddress | slice:0:20 }}…</span>
+                  <svg width="14" height="14" fill="none" stroke="#aaa" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                  </svg>
+                  <span class="track-to">{{ d.dropAddress | slice:0:20 }}…</span>
+                </div>
+                <span class="status-badge status-scheduled">Scheduled</span>
+                <div class="del-scheduled-info" style="margin-top:4px;">
+                  <svg width="11" height="11" fill="none" stroke="#7c3aed" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  {{ formatScheduledDate(d) }}
+                </div>
+              </div>
+            </div>
+          </div>
 
         </div>
       </div>
@@ -608,10 +643,16 @@
               <div class="del-meta">{{ d.packageType || 'Parcel' }} · {{ d.weightKg || 0 }} kg
                 <span *ngIf="d.distanceKm"> · {{ d.distanceKm }} km</span>
               </div>
+              <div class="del-scheduled-info" *ngIf="isScheduledFuture(d)">
+                <svg width="11" height="11" fill="none" stroke="#7c3aed" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Scheduled for {{ formatScheduledDate(d) }}
+              </div>
             </div>
             <div class="del-right">
               <div class="del-amount">₹{{ d.totalAmount || 0 }}</div>
-              <span class="status-badge" [ngClass]="getStatusClass(d.status)">{{ getStatusLabel(d.status) }}</span>
+              <span class="status-badge" [ngClass]="getDeliveryStatusClass(d)">{{ getDeliveryStatusLabel(d) }}</span>
             </div>
             <!-- OTP display for user (Feature 4) — show when porter is at pickup -->
             <div class="del-otp-card" *ngIf="(d.status||'').toUpperCase() === 'ARRIVED_AT_PICKUP' && d.otp">

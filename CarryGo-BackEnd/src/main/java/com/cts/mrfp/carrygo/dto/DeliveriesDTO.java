@@ -1,6 +1,5 @@
 package com.cts.mrfp.carrygo.dto;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import jakarta.validation.constraints.NotBlank;
 
@@ -40,7 +39,7 @@ public class DeliveriesDTO {
     private String specialInstructions;
     private String deliveryType;
     
-    private LocalDate preferredDate;
+    private String preferredDate;
     private String preferredTime;
     private Boolean flexibleMatching;
     
@@ -80,7 +79,7 @@ public class DeliveriesDTO {
                         Float pickupLat, Float pickupLng, String pickupContact, String pickupPhone,
                         String dropAddress, Float dropLat, Float dropLng, String receiverName,
                         String receiverPhone, String packageType, Float weightKg, String packageSize,
-                        String specialInstructions, String deliveryType, LocalDate preferredDate,
+                        String specialInstructions, String deliveryType, String preferredDate,
                         String preferredTime, Boolean flexibleMatching, Float distanceKm,
                         Float basePrice, Float distanceCost, Float serviceFee, Float totalAmount,
                         String status, LocalDateTime createdAt) {
@@ -169,8 +168,8 @@ public class DeliveriesDTO {
     public String getDeliveryType() { return deliveryType; }
     public void setDeliveryType(String deliveryType) { this.deliveryType = deliveryType; }
 
-    public LocalDate getPreferredDate() { return preferredDate; }
-    public void setPreferredDate(LocalDate preferredDate) { this.preferredDate = preferredDate; }
+    public String getPreferredDate() { return preferredDate; }
+    public void setPreferredDate(String preferredDate) { this.preferredDate = preferredDate; }
 
     public String getPreferredTime() { return preferredTime; }
     public void setPreferredTime(String preferredTime) { this.preferredTime = preferredTime; }

@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -37,12 +38,23 @@ public class DeliveriesService {
 
         Deliveries saved = deliveriesRepo.save(delivery);
 
-        // Count matching porters for broadcast progress state
-        List<Users> matchingPorters = findMatchingPorters(saved);
-        saved.setTotalPool(matchingPorters.size());
-        saved.setTotalNotified(matchingPorters.size());
-        saved.setTotalRejected(0);
-        saved = deliveriesRepo.save(saved);
+        // For immediate deliveries dispatch now; for future-scheduled ones the
+        // ScheduledDeliveryDispatcher will dispatch at the scheduled time.
+        if (!isScheduledForFuture(saved)) {
+            saved = dispatchDelivery(saved);
+        }
+
+        return saved;
+    }
+
+    // ── Dispatch delivery to porters (broadcast + notifications) ─────────────
+
+    public Deliveries dispatchDelivery(Deliveries delivery) {
+        List<Users> matchingPorters = findMatchingPorters(delivery);
+        delivery.setTotalPool(matchingPorters.size());
+        delivery.setTotalNotified(matchingPorters.size());
+        delivery.setTotalRejected(0);
+        Deliveries saved = deliveriesRepo.save(delivery);
 
         DeliveriesDTO savedDTO = DTOConverter.convertDeliveriesToDTO(saved);
 
@@ -54,13 +66,35 @@ public class DeliveriesService {
             sendNewRequestNotification(porter, saved);
         }
 
-        // Push initial broadcast state to sender
         if (saved.getSender() != null) {
+            // If this was a scheduled delivery being dispatched, notify the sender
+            if (saved.getPreferredDate() != null) {
+                sendStatusNotification(saved.getSender(),
+                    "Your scheduled delivery is now active — we're finding a porter for you!");
+            }
             wsService.push(saved.getSender().getUserId(), "broadcastUpdate",
                 buildBroadcastState(saved, false));
         }
 
         return saved;
+    }
+
+    // ── Scheduled delivery helpers ────────────────────────────────────────────
+
+    private boolean isScheduledForFuture(Deliveries delivery) {
+        if (delivery.getPreferredDate() == null) return false;
+        return buildScheduledDateTime(delivery).isAfter(LocalDateTime.now());
+    }
+
+    public LocalDateTime buildScheduledDateTime(Deliveries delivery) {
+        LocalDate date = delivery.getPreferredDate();
+        if (delivery.getPreferredTime() != null && !delivery.getPreferredTime().isBlank()) {
+            String[] parts = delivery.getPreferredTime().split(":");
+            int hour = Integer.parseInt(parts[0]);
+            int min  = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
+            return date.atTime(hour, min);
+        }
+        return date.atStartOfDay();
     }
 
     // ── Find matching online porters ──────────────────────────────────────────
@@ -158,7 +192,11 @@ public class DeliveriesService {
     }
 
     public List<Deliveries> getAllAvailableDeliveries() {
-        return deliveriesRepo.findByStatus("PENDING");
+        // Only return PENDING deliveries that have been dispatched (totalPool not null).
+        // Future-scheduled deliveries have totalPool == null until their scheduled time arrives.
+        return deliveriesRepo.findByStatus("PENDING").stream()
+                .filter(d -> d.getTotalPool() != null)
+                .collect(Collectors.toList());
     }
 
     public Deliveries getDeliveryById(Integer id) {

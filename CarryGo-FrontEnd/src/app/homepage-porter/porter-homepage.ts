@@ -11,6 +11,7 @@ import { UserService } from '../services/user-service';
 import { AuthService } from '../services/auth.service';
 import { Delivery } from '../services/delivery/delivery';
 import { PorterStatusService } from '../services/porter-status.service';
+import { PorterPendingOrdersService } from '../services/porter-pending-orders.service';
 import { SseService } from '../services/sse.service';
 import { forkJoin, interval, Subscription } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
@@ -76,7 +77,6 @@ export class PorterDashboardComponent implements OnInit, OnDestroy, AfterViewIni
   statusToast   = '';
   earningsToday = 0;
   walletBalance = 0;
-  notificationCount = 0;
   showNotifPanel = false;
   userInitials  = '';
   errorMessage  = '';
@@ -85,8 +85,11 @@ export class PorterDashboardComponent implements OnInit, OnDestroy, AfterViewIni
 
   // Delivery data
   activeOrders:  DeliveryOrder[] = [];
-  orderRequests: DeliveryOrder[] = [];
   allDeliveries: DeliveryOrder[] = [];
+
+  // Shared notification state (read from service, never set directly)
+  get orderRequests(): DeliveryOrder[] { return this.pendingOrders.orders as DeliveryOrder[]; }
+  get notificationCount(): number      { return this.pendingOrders.count; }
 
   // Stats
   todayDeliveries  = 0;
@@ -134,7 +137,7 @@ export class PorterDashboardComponent implements OnInit, OnDestroy, AfterViewIni
 
   private sseSub: Subscription | null = null;
   private pollSub: Subscription | null = null;
-  private readonly apiBase = 'https://carrygo-production.up.railway.app/api';
+  private readonly apiBase = 'http://localhost:8081/api';
 
   constructor(
     private userService:    UserService,
@@ -143,6 +146,7 @@ export class PorterDashboardComponent implements OnInit, OnDestroy, AfterViewIni
     private router:         Router,
     private http:           HttpClient,
     private statusService:  PorterStatusService,
+    private pendingOrders:  PorterPendingOrdersService,
     private sseService:     SseService,
     private cdr:            ChangeDetectorRef,
     @Inject(PLATFORM_ID) private platformId: Object
@@ -229,14 +233,9 @@ export class PorterDashboardComponent implements OnInit, OnDestroy, AfterViewIni
         // Catch-up: add valid PENDING orders that SSE may have missed
         if (this.isOnline && pending.length) {
           const existingIds = new Set(this.orderRequests.map(r => r.deliveryId));
-          const missed = pending
-            .filter(p => this.isValidOrder(p))
-            .filter(p => !existingIds.has(p.deliveryId));
-          if (missed.length) {
-            this.orderRequests     = [...missed, ...this.orderRequests];
-            this.notificationCount = this.orderRequests.length;
-            this.openPopup(missed[0]);
-          }
+          const missed = pending.filter(p => this.isValidOrder(p) && !existingIds.has(p.deliveryId));
+          missed.forEach(m => this.pendingOrders.add(m));
+          if (missed.length) this.openPopup(missed[0]);
         }
 
         this.cdr.detectChanges();
@@ -277,14 +276,9 @@ export class PorterDashboardComponent implements OnInit, OnDestroy, AfterViewIni
         // Catch-up: surface valid PENDING requests missed by SSE
         if (this.isOnline && pending.length) {
           const existingIds = new Set(this.orderRequests.map(r => r.deliveryId));
-          const missed = pending
-            .filter(p => this.isValidOrder(p))
-            .filter(p => !existingIds.has(p.deliveryId));
-          if (missed.length) {
-            this.orderRequests     = [...missed, ...this.orderRequests];
-            this.notificationCount = this.orderRequests.length;
-            if (!this.showRequestPopup) this.openPopup(missed[0]);
-          }
+          const missed = pending.filter(p => this.isValidOrder(p) && !existingIds.has(p.deliveryId));
+          missed.forEach(m => this.pendingOrders.add(m));
+          if (missed.length && !this.showRequestPopup) this.openPopup(missed[0]);
         }
         this.cdr.detectChanges();
       }
@@ -313,11 +307,7 @@ export class PorterDashboardComponent implements OnInit, OnDestroy, AfterViewIni
 
   handleIncomingRequest(request: DeliveryOrder): void {
     if (!this.isValidOrder(request)) return;
-    const alreadySeen = this.orderRequests.some(r => r.deliveryId === request.deliveryId);
-    if (!alreadySeen) {
-      this.orderRequests     = [request, ...this.orderRequests];
-      this.notificationCount = this.orderRequests.length;
-    }
+    this.pendingOrders.add(request);
     this.openPopup(request);
     this.cdr.detectChanges();
   }
@@ -339,12 +329,13 @@ export class PorterDashboardComponent implements OnInit, OnDestroy, AfterViewIni
   }
 
   autoDismissPopup(): void {
-    const req = this.incomingRequest;
+    const timedOutId = this.incomingRequest?.deliveryId;
     this.closePopup();
-    // Notify backend that this porter timed out (counts as implicit reject)
-    if (req && this.porterProfile) {
-      this.http.patch(`${this.apiBase}/deliveries/${req.deliveryId}/reject?commuterId=${this.porterProfile.userId}`, {})
-        .pipe(catchError(() => of(null))).subscribe();
+    // Request stays in orderRequests (notification bell) — only removed on explicit accept/reject
+    // If other requests are queued, surface the next one automatically
+    const next = this.orderRequests.find(r => r.deliveryId !== timedOutId);
+    if (next) {
+      setTimeout(() => this.openPopup(next), 400);
     }
   }
 
@@ -464,7 +455,7 @@ export class PorterDashboardComponent implements OnInit, OnDestroy, AfterViewIni
     const newStatus = !this.isOnline;
     this.statusService.set(newStatus);
 
-    if (!newStatus) { this.orderRequests = []; this.notificationCount = 0; }
+    if (!newStatus) { this.pendingOrders.clear(); }
 
     this.statusToast = newStatus ? "You're now Online" : "You went Offline";
     setTimeout(() => { this.isToggling = false; }, 500);
@@ -489,12 +480,8 @@ export class PorterDashboardComponent implements OnInit, OnDestroy, AfterViewIni
           if (!valid.length) return;
           const existingIds = new Set(this.orderRequests.map(r => r.deliveryId));
           const missed = valid.filter(p => !existingIds.has(p.deliveryId));
-          if (missed.length) {
-            this.orderRequests     = [...missed, ...this.orderRequests];
-            this.notificationCount = this.orderRequests.length;
-            this.openPopup(missed[0]);
-            this.cdr.detectChanges();
-          }
+          missed.forEach(m => this.pendingOrders.add(m));
+          if (missed.length) { this.openPopup(missed[0]); this.cdr.detectChanges(); }
         }
       });
   }
@@ -516,11 +503,10 @@ export class PorterDashboardComponent implements OnInit, OnDestroy, AfterViewIni
           dropAddress:   updated.dropAddress   || order.dropAddress,
           distanceKm:    updated.distanceKm    ?? order.distanceKm,
         };
-        this.orderRequests     = this.orderRequests.filter(o => o.deliveryId !== order.deliveryId);
+        this.pendingOrders.remove(order.deliveryId);
         this.activeOrders      = [merged, ...this.activeOrders];
         this.activeOrdersCount = this.activeOrders.length;
         this.todayDeliveries   = this.activeOrders.length + this.completedCount;
-        this.notificationCount = this.orderRequests.length;
         // Feature 4: Auto-open navigation map immediately after accept
         this.openNavMap(merged);
         this.cdr.detectChanges();
@@ -534,8 +520,7 @@ export class PorterDashboardComponent implements OnInit, OnDestroy, AfterViewIni
   }
 
   rejectOrder(order: DeliveryOrder): void {
-    this.orderRequests     = this.orderRequests.filter(o => o.deliveryId !== order.deliveryId);
-    this.notificationCount = this.orderRequests.length;
+    this.pendingOrders.remove(order.deliveryId);
     // Notify backend so broadcast progress bar updates for the user
     if (this.porterProfile) {
       this.http.patch(`${this.apiBase}/deliveries/${order.deliveryId}/reject?commuterId=${this.porterProfile.userId}`, {})

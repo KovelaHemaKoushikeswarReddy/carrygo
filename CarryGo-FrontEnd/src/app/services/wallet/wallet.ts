@@ -6,7 +6,7 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class Wallet {
-  private apiUrl = 'https://carrygo-production.up.railway.app/api/wallets';
+  private apiUrl = 'http://localhost:8081/api/wallets';
 
   constructor(private http: HttpClient) {}
 

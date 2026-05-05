@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../services/auth.service';
 import { UserService } from '../services/user-service';
 import { PorterStatusService } from '../services/porter-status.service';
+import { PorterPendingOrdersService } from '../services/porter-pending-orders.service';
 import { of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
@@ -51,8 +52,8 @@ export class PorterDeliveriesComponent implements OnInit {
   earningsToday: number = 0;
   showProfileDropdown: boolean = false;
   showNotifPanel: boolean = false;
-  orderRequests: any[] = [];
-  notificationCount: number = 0;
+  get orderRequests(): any[]  { return this.pendingOrders.orders; }
+  get notificationCount(): number { return this.pendingOrders.count; }
 
   allDeliveries: Delivery[] = [];
   filteredDeliveries: Delivery[] = [];
@@ -62,7 +63,7 @@ export class PorterDeliveriesComponent implements OnInit {
 
   counts = { all: 0, active: 0, completed: 0, cancelled: 0 };
 
-  private readonly apiBase = 'https://carrygo-production.up.railway.app/api';
+  private readonly apiBase = 'http://localhost:8081/api';
 
   constructor(
     private authService: AuthService,
@@ -71,6 +72,7 @@ export class PorterDeliveriesComponent implements OnInit {
     private route: ActivatedRoute,
     private http: HttpClient,
     private statusService: PorterStatusService,
+    private pendingOrders: PorterPendingOrdersService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -91,7 +93,7 @@ export class PorterDeliveriesComponent implements OnInit {
         this.porterProfile = profile;
         this.statusService.init(profile.userId);
         this.generateInitials(profile.name);
-        this.loadPendingOrders(profile.userId);
+        this.pendingOrders.load(profile.userId);
         this.cdr.detectChanges();
         if (!paramId) {
           this.loadWallet(profile.userId);
@@ -248,14 +250,9 @@ export class PorterDeliveriesComponent implements OnInit {
 
   toggleNotifPanel(): void { this.showNotifPanel = !this.showNotifPanel; this.showProfileDropdown = false; }
 
-  loadPendingOrders(userId: number): void {
-    this.http.get<any[]>(`${this.apiBase}/deliveries/matched/${userId}`)
-      .pipe(catchError(() => of([] as any[])))
-      .subscribe(orders => {
-        this.orderRequests = orders.filter((o: any) => o.pickupAddress?.trim() && o.dropAddress?.trim());
-        this.notificationCount = this.orderRequests.length;
-        this.cdr.detectChanges();
-      });
+  goToDashboard(): void {
+    const uid = this.porterProfile?.userId;
+    if (uid) this.router.navigate(['/porter-dashboard', uid]);
   }
 
   @HostListener('document:click', ['$event'])

@@ -85,7 +85,7 @@
               <p>No pending requests</p>
             </div>
             <div class="notif-list" *ngIf="orderRequests.length > 0">
-              <div class="notif-item" *ngFor="let req of orderRequests">
+              <div class="notif-item" *ngFor="let req of orderRequests" (click)="goToDashboard(); showNotifPanel=false" style="cursor:pointer">
                 <div class="notif-item-route">
                   <span class="notif-dot green"></span>
                   <span class="notif-addr">{{ req.pickupAddress | slice:0:28 }}…</span>

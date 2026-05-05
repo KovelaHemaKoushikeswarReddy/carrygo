@@ -89,7 +89,7 @@ public class DTOConverter {
             delivery.getPackageSize(),
             delivery.getSpecialInstructions(),
             delivery.getDeliveryType(),
-            delivery.getPreferredDate(),
+            delivery.getPreferredDate() != null ? delivery.getPreferredDate().toString() : null,
             delivery.getPreferredTime(),
             delivery.getFlexibleMatching(),
             delivery.getDistanceKm(),

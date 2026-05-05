@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem *)",
+      "mcp__ide__getDiagnostics"
+    ]
+  }
+}

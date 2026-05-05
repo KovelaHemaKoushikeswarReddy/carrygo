@@ -22,7 +22,7 @@ export class SseService {
    */
   private pendingChatSubs = new Set<number>();
 
-  private readonly wsUrl = 'wss://carrygo-production.up.railway.app/ws';
+  private readonly wsUrl = 'ws://localhost:8081/ws';
 
   constructor(@Inject(PLATFORM_ID) private platformId: Object) {}
 

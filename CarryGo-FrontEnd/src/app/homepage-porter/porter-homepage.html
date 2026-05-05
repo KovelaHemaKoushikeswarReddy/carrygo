@@ -422,7 +422,7 @@
 </div>
 
 <!-- ═══════════════════════ RIDE REQUEST POPUP (Feature 3) ═══════════════════════ -->
-<div class="ride-popup-overlay" *ngIf="showRequestPopup" (click)="handleRejectPopup()">
+<div class="ride-popup-overlay" *ngIf="showRequestPopup" (click)="closePopup()">
   <div class="ride-popup-sheet" (click)="$event.stopPropagation()">
 
     <!-- Drag handle -->
