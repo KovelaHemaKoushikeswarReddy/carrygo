@@ -9,7 +9,7 @@ export class PorterPendingOrdersService {
   private _orders = new BehaviorSubject<any[]>([]);
   orders$ = this._orders.asObservable();
 
-  private readonly apiBase = 'http://localhost:8081/api';
+  private readonly apiBase = 'https://carrygo-production.up.railway.app/api';
 
   constructor(private http: HttpClient) {}
 

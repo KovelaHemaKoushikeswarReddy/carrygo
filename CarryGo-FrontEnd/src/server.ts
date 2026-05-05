@@ -18,7 +18,7 @@ const angularApp = new AngularNodeAppEngine();
  *
  * Example:
  * ```ts
- * app.get('http://localhost:8081/api/{*splat}', (req, res) => {
+ * app.get('https://carrygo-production.up.railway.app/api/{*splat}', (req, res) => {
  *   // Handle API request
  * });
  * ```
