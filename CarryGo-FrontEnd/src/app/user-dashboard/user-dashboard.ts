@@ -210,7 +210,7 @@ export class UserDashboard implements OnInit, OnDestroy {
   private inlineMapInstance: any = null;
   private leafletLib: any = null;
 
-  private readonly apiBase = 'https://carrygo-production.up.railway.app/api';
+  private readonly apiBase = 'https://carrygo-production-9468.up.railway.app/api';
 
   constructor(
     private authService:          AuthService,

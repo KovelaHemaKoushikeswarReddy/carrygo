@@ -25,7 +25,7 @@ export interface IntercityCourier {
 
 @Injectable({ providedIn: 'root' })
 export class IntercityService {
-  private readonly base = 'https://carrygo-production.up.railway.app/api/intercity';
+  private readonly base = 'https://carrygo-production-9468.up.railway.app/api/intercity';
 
   constructor(private http: HttpClient) {}
 

@@ -31,7 +31,7 @@ export interface PorterStatus {
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
-  private baseUrl = 'https://carrygo-production.up.railway.app/api';
+  private baseUrl = 'https://carrygo-production-9468.up.railway.app/api';
 
   constructor(private http: HttpClient) {}
 
