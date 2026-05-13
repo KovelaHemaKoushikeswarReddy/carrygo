@@ -15,7 +15,7 @@ interface QuickReply { label: string; action: string; }
    🔑 GEMINI API KEY — paste yours between the quotes.
    Get one free at https://aistudio.google.com/app/apikey
    ══════════════════════════════════════════════════════════ */
-const GEMINI_API_KEY = 'AIzaSyAtyouZNMYn5GPB3T_LA2dlmvx4qZT7LsQ';
+const GEMINI_API_KEY = '';
 const GEMINI_MODEL   = 'gemini-2.5-flash-lite';
 const GEMINI_URL     = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent`;
 
