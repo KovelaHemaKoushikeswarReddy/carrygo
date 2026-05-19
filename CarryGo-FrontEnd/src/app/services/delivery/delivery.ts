@@ -6,7 +6,7 @@ import { Observable } from 'rxjs';
   providedIn: 'root',
 })
 export class Delivery {
-  private apiUrl = 'https://carrygo-production-9468.up.railway.app/api/deliveries';
+  private apiUrl = 'https://carrygo-rxjj.onrender.com/api/deliveries';
 
   constructor(private http: HttpClient) {}
 

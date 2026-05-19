@@ -13,7 +13,7 @@ export interface AppNotification {
 
 @Injectable({ providedIn: 'root' })
 export class NotificationsService {
-  private base = 'https://carrygo-production-9468.up.railway.app/api/notifications';
+  private base = 'https://carrygo-rxjj.onrender.com/api/notifications';
 
   constructor(private http: HttpClient) {}
 

@@ -134,7 +134,7 @@ export class PorterDashboardComponent implements OnInit, OnDestroy, AfterViewIni
 
   private sseSub: Subscription | null = null;
   private pollSub: Subscription | null = null;
-  private readonly apiBase = 'https://carrygo-production-9468.up.railway.app/api';
+  private readonly apiBase = 'https://carrygo-rxjj.onrender.com/api';
 
   constructor(
     private userService:    UserService,
