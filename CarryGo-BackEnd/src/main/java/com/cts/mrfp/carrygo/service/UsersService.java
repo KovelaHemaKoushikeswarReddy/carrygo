@@ -25,6 +25,13 @@ public class UsersService {
         this.usersRepository = usersRepository;
     }
 
+    // "commuter" is just the UI label for a porter — treat them as the same role everywhere.
+    private static String normalizeRole(String role) {
+        if (role == null) return "user";
+        String r = role.trim().toLowerCase();
+        return r.equals("commuter") ? "porter" : r;
+    }
+
     // Registration
     public Users register(Users users) {
         if (users.getPassword() == null || users.getPassword().isBlank()) {
@@ -32,7 +39,7 @@ public class UsersService {
         }
         users.setEmail(users.getEmail().trim());
         users.setPassword(users.getPassword().trim());
-        users.setRole(users.getRole() != null ? users.getRole().trim().toLowerCase() : "user");
+        users.setRole(normalizeRole(users.getRole()));
         Users saved = usersRepository.save(users);
 
         // Auto-create wallet with 0 balance for every new user
@@ -49,15 +56,16 @@ public class UsersService {
     public Optional<Users> login(String email, String password, String role) {
         String normalizedEmail = email.trim();
         String normalizedPassword = password.trim();
-        String normalizedRole = role.trim().toLowerCase();
+        String normalizedRole = normalizeRole(role);
 
         Optional<Users> user = usersRepository.findByEmailAndPassword(normalizedEmail, normalizedPassword);
 
-        // Validate role: supports comma-separated roles e.g. "user,porter"
+        // Validate role: supports comma-separated roles e.g. "user,porter".
+        // Each stored token is normalized too so legacy "commuter" rows still match.
         return user.filter(u -> u.getRole() != null &&
                 Arrays.stream(u.getRole().split(","))
-                      .map(String::trim)
-                      .anyMatch(r -> r.equalsIgnoreCase(normalizedRole)));
+                      .map(UsersService::normalizeRole)
+                      .anyMatch(r -> r.equals(normalizedRole)));
     }
 
     // Retrieve user by ID
