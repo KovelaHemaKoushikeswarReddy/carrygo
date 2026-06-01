@@ -10,6 +10,8 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
 
+// Sets up Swagger / OpenAPI docs at /swagger-ui.html.
+// Useful for testing the REST endpoints in a browser without writing a client.
 @Configuration
 public class OpenApiConfig {
 
@@ -19,12 +21,10 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("CarryGo API")
                         .description("REST API for the CarryGo platform: users, deliveries, intercity courier, "
-                                + "fare estimation, ratings, wallets, transactions, notifications, chat, and SSE streams.")
+                                + "fare estimation, ratings, wallets, transactions, notifications, chat, and WebSocket streams.")
                         .version("v1")
                         .contact(new Contact().name("CarryGo Team"))
                         .license(new License().name("Internal")))
-                .servers(List.of(
-                        new Server().url("https://carrygo-production-9468.up.railway.app").description("Production (Railway)"),
-                        new Server().url("/").description("Current host")));
+                .servers(List.of(new Server().url("/").description("Current host")));
     }
 }

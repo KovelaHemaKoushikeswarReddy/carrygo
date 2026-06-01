@@ -2,6 +2,7 @@ package com.cts.mrfp.carrygo.dto;
 
 import java.time.LocalDateTime;
 
+// JSON shape of a wallet transaction (CREDIT / DEBIT).
 public class TransactionsDTO {
     private Integer transactionId;
     private Integer walletId;

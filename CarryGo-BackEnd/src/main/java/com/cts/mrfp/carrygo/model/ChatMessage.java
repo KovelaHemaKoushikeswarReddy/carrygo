@@ -3,6 +3,7 @@ package com.cts.mrfp.carrygo.model;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+// One row per chat message exchanged between a sender and a porter during a delivery.
 @Entity
 @Table(name = "chat_messages")
 public class ChatMessage {
@@ -15,12 +16,12 @@ public class ChatMessage {
     private Integer senderId;
     private String senderName;
 
-    /** "USER" or "PORTER" */
+    // "USER" or "PORTER" — used to decide which side of the chat bubble to render.
     private String senderRole;
 
     private Integer receiverId;
 
-    /** "TEXT", "IMAGE", or "SYSTEM" */
+    // "TEXT" / "IMAGE" / "SYSTEM" — most messages are TEXT.
     private String messageType;
 
     @Column(length = 1000)

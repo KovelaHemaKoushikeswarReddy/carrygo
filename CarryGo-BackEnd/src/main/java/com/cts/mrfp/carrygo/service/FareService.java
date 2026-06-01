@@ -10,13 +10,15 @@ import org.springframework.stereotype.Service;
 import java.time.LocalTime;
 import java.util.Map;
 
+// Calculates the fare for a delivery.
+// The price = (base + per-km + per-minute) × (surge × time-of-day) + premium-zone surcharge.
 @Service
 public class FareService {
 
     @Autowired private DeliveriesRepository deliveriesRepo;
     @Autowired private UsersRepository usersRepo;
 
-    // Base rates per vehicle type: [baseFare, perKm, perMin]
+    // Per-vehicle pricing. Each row is [baseFare, perKm, perMinute].
     private static final Map<String, float[]> BASE_RATES = Map.of(
         "bike",  new float[]{15,  8f,  0.5f},
         "auto",  new float[]{25, 12f,  1.0f},
@@ -25,8 +27,8 @@ public class FareService {
         "suv",   new float[]{80, 22f,  2.5f}
     );
 
-    // Premium zones: [minLat, maxLat, minLng, maxLng, surcharge]
-    // These cover major Indian airports and hubs as rough bounding boxes
+    // Rough bounding boxes around major Indian airports where we add a surcharge.
+    // Each row is [minLat, maxLat, minLng, maxLng, surcharge in ₹].
     private static final float[][] PREMIUM_ZONES = {
         // Delhi IGI Airport area
         {28.53f, 28.59f, 77.06f, 77.12f, 60f},
@@ -45,45 +47,45 @@ public class FareService {
     };
 
     public FareEstimateResponse estimate(FareEstimateRequest req) {
-        String vt = (req.getVehicleType() == null) ? "auto"
-                    : req.getVehicleType().toLowerCase();
+        // Pick the rate table for the chosen vehicle, default to "auto" if unknown.
+        String vt = (req.getVehicleType() == null) ? "auto" : req.getVehicleType().toLowerCase();
         float[] rates = BASE_RATES.getOrDefault(vt, BASE_RATES.get("auto"));
 
-        // Distance
+        // Straight-line distance between the two GPS points.
         float distKm = haversineKm(req.getPickupLat(), req.getPickupLng(),
                                     req.getDropLat(),  req.getDropLng());
 
-        // Speed assumption: 30 km/h average
+        // Estimate how long the trip takes assuming an average city speed of 30 km/h.
         int estimatedMinutes = Math.max(5, Math.round(distKm / 30f * 60));
 
-        // Fare components (pre-surge/multiplier)
+        // Raw fare parts before any multiplier.
         float baseFare     = rates[0];
         float distanceFare = rates[1] * distKm;
         float timeFare     = rates[2] * estimatedMinutes;
 
-        // Time-of-day multiplier
+        // Charge a bit more during morning peak, evening peak, and late night.
         int hour = LocalTime.now().getHour();
         float timeMultiplier = 1.0f;
         if (hour >= 8  && hour <= 10) timeMultiplier = 1.3f;
         else if (hour >= 18 && hour <= 21) timeMultiplier = 1.3f;
         else if (hour >= 23 || hour <= 5)  timeMultiplier = 1.2f;
 
-        // Demand-based surge
+        // If demand is much higher than the number of online porters, apply a surge.
         float surgeMultiplier = computeSurge(req.getPickupLat(), req.getPickupLng());
         float combinedMultiplier = surgeMultiplier * timeMultiplier;
 
         String surgeLabel = getSurgeLabel(combinedMultiplier);
 
-        // Zone surcharge
+        // Extra ₹ if the pickup or drop is near a premium zone (airport, etc.).
         float zoneSurcharge = computeZoneSurcharge(
             req.getPickupLat(), req.getPickupLng(),
             req.getDropLat(),   req.getDropLng());
 
-        // Total
+        // Add the parts together and round to 1 decimal.
         float subtotal = (baseFare + distanceFare + timeFare) * combinedMultiplier;
         float total    = Math.round((subtotal + zoneSurcharge) * 10f) / 10f;
 
-        // ±5% fare range
+        // Show a small ±5% range so the user understands the fare can drift slightly.
         int lo = (int) Math.floor(total * 0.95);
         int hi = (int) Math.ceil(total  * 1.05);
 
@@ -102,6 +104,8 @@ public class FareService {
         return resp;
     }
 
+    // Surge multiplier based on the ratio of pending requests to available porters.
+    // More requests per porter = higher surge.
     private float computeSurge(Float pickupLat, Float pickupLng) {
         long activeRequests = deliveriesRepo.findByStatus("PENDING").size();
         long onlinePorters  = usersRepo.findByIsOnlineTrue().stream()
@@ -118,6 +122,7 @@ public class FareService {
         return 2.0f;
     }
 
+    // Returns the airport surcharge if either pickup or drop falls inside a premium zone.
     private float computeZoneSurcharge(Float pLat, Float pLng, Float dLat, Float dLng) {
         if (pLat == null || dLat == null) return 0;
         for (float[] z : PREMIUM_ZONES) {
@@ -128,6 +133,7 @@ public class FareService {
         return 0;
     }
 
+    // Friendly label shown in the UI alongside the multiplier number.
     private String getSurgeLabel(float multiplier) {
         if (multiplier <= 1.0f) return "Normal";
         if (multiplier <= 1.3f) return "Slight Demand";
@@ -136,9 +142,11 @@ public class FareService {
         return "Surge Pricing";
     }
 
+    // Haversine formula — distance in km between two lat/lng points on a sphere.
+    // Used to estimate trip distance without calling a routing API.
     private float haversineKm(Float lat1, Float lng1, Float lat2, Float lng2) {
         if (lat1 == null || lat2 == null) return 5.0f;
-        double R = 6371;
+        double R = 6371; // Earth radius in km
         double dLat = Math.toRadians(lat2 - lat1);
         double dLng = Math.toRadians(lng2 - lng1);
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)

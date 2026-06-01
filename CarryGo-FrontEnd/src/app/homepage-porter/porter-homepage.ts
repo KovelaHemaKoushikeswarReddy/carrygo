@@ -56,6 +56,9 @@ interface WalletData {
   lastUpdated: string;
 }
 
+// Main porter dashboard. Shows incoming ride requests in real time (via WebSocket),
+// the porter's earnings + delivery charts, an online/offline toggle, and the OTP entry box
+// used to verify a pickup and start a ride.
 @Component({
   selector: 'porter-dashboard',
   standalone: true,
@@ -134,7 +137,7 @@ export class PorterDashboardComponent implements OnInit, OnDestroy, AfterViewIni
 
   private sseSub: Subscription | null = null;
   private pollSub: Subscription | null = null;
-  private readonly apiBase = 'https://carrygo-rxjj.onrender.com/api';
+  private readonly apiBase = 'http://localhost:8081/api';
 
   constructor(
     private userService:    UserService,

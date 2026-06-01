@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
+// Endpoints for the in-app notification bell:
+// listing a user's notifications, creating new ones, and marking them as read.
 @RestController
 @RequestMapping("/api/notifications")
 @CrossOrigin(origins = "*")
@@ -19,26 +21,28 @@ public class NotificationsController {
     @Autowired
     private NotificationsService notificationsService;
 
+    // GET /api/notifications/user/{userId} — all notifications for one user.
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<NotificationsDTO>> getUserNotifications(@PathVariable Integer userId) {
-        List<Notifications> notifications = notificationsService.getUserNotifications(userId);
-        List<NotificationsDTO> dtos = notifications.stream()
+        List<NotificationsDTO> dtos = notificationsService.getUserNotifications(userId).stream()
             .map(DTOConverter::convertNotificationsToDTO)
             .collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
     }
 
+    // POST /api/notifications — save a new notification (used for manual / test sends).
     @PostMapping
     public ResponseEntity<NotificationsDTO> sendNotification(@RequestBody NotificationsDTO notificationDTO) {
         Notifications notification = new Notifications();
         notification.setType(notificationDTO.getType());
         notification.setMessage(notificationDTO.getMessage());
         notification.setIsRead(Boolean.TRUE.equals(notificationDTO.getIsRead()));
-        
+
         Notifications sent = notificationsService.sendNotification(notification);
         return ResponseEntity.ok(DTOConverter.convertNotificationsToDTO(sent));
     }
 
+    // PATCH /api/notifications/{id}/read — flip a single notification to "read".
     @PatchMapping("/{id}/read")
     public ResponseEntity<Void> markAsRead(@PathVariable Integer id) {
         notificationsService.markAsRead(id);

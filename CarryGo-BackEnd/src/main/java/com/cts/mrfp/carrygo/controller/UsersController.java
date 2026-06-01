@@ -18,9 +18,11 @@ import com.cts.mrfp.carrygo.dto.CommuterRegistrationRequest;
 import com.cts.mrfp.carrygo.service.UsersService;
 import com.cts.mrfp.carrygo.util.DTOConverter;
 
+// REST endpoints for everything related to users: signup, login, profile updates,
+// going online/offline, and upgrading a regular user into a porter/commuter.
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "*") // allow Angular frontend
+@CrossOrigin(origins = "*")
 public class UsersController {
     private final UsersService usersService;
 
@@ -28,7 +30,7 @@ public class UsersController {
         this.usersService = usersService;
     }
 
-    // Registration endpoint
+    // POST /api/users/register — create a new user account.
     @PostMapping("/register")
     public ResponseEntity<UsersDTO> register(@RequestBody UsersDTO userDTO) {
         Users user = DTOConverter.convertDTOToUsers(userDTO);
@@ -36,7 +38,7 @@ public class UsersController {
         return ResponseEntity.ok(DTOConverter.convertUsersToDTO(saved));
     }
 
-    // Login endpoint
+    // POST /api/users/login — verify email/password and return the user if it matches.
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> loginData) {
         String email = loginData.get("email");
@@ -48,7 +50,7 @@ public class UsersController {
                 .orElseGet(() -> ResponseEntity.status(401).body("Invalid credentials"));
     }
 
-    // Retrieve user by ID
+    // GET /api/users/{id} — fetch a user by their numeric ID.
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable Integer id) {
         return usersService.getUserById(id)
@@ -56,14 +58,16 @@ public class UsersController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-     @GetMapping("/email/{email}")
+    // GET /api/users/email/{email} — fetch a user by email (used by the porter profile screen).
+    @GetMapping("/email/{email}")
     public ResponseEntity<?> getUserByEmail(@PathVariable String email) {
         return usersService.getUserByEmail(email)
                 .<ResponseEntity<?>>map(user -> ResponseEntity.ok(DTOConverter.convertUsersToDTO(user)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-     @PutMapping("/{userId}/status")
+    // PUT /api/users/{userId}/status — porter toggles online/offline so they receive ride requests.
+    @PutMapping("/{userId}/status")
     public ResponseEntity<?> updateUserStatus(@PathVariable Integer userId, @RequestBody Map<String, Boolean> statusData) {
         Boolean isOnline = statusData.get("is_online");
         if (isOnline == null) {
@@ -74,7 +78,7 @@ public class UsersController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // Update user KYC / profile fields
+    // PUT /api/users/{userId} — update profile fields (KYC info, vehicle details, etc.).
     @PutMapping("/{userId}")
     public ResponseEntity<?> updateUserProfile(@PathVariable Integer userId, @RequestBody UsersDTO profileDTO) {
         return usersService.updateUserProfile(userId, profileDTO)
@@ -82,7 +86,8 @@ public class UsersController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // Register an existing user as a commuter (adds porter role + saves vehicle/licence info)
+    // POST /api/users/{userId}/register-commuter — turn an existing user into a porter
+    // by adding the porter role and saving their vehicle / licence info.
     @PostMapping("/{userId}/register-commuter")
     public ResponseEntity<?> registerAsCommuter(@PathVariable Integer userId,
                                                 @RequestBody CommuterRegistrationRequest req) {

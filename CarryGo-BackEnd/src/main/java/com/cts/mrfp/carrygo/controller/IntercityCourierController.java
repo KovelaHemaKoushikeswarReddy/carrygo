@@ -8,11 +8,15 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+// Returns a hard-coded list of intercity courier providers (DTDC, Blue Dart, FedEx, etc.).
+// This is read-only — there is no database involved. The frontend uses it on the
+// intercity courier comparison screen so users can pick a third-party shipper.
 @RestController
 @RequestMapping("/api/intercity")
 @CrossOrigin(origins = "*")
 public class IntercityCourierController {
 
+    // The full list of couriers we show. Kept in code for simplicity since these change rarely.
     private static final List<IntercityCourierDTO> COURIERS = Arrays.asList(
         new IntercityCourierDTO(1, "DTDC", "Delivering Smiles Nationwide",
             "India's leading express parcel delivery company with 13,000+ pin codes coverage across the country.",
@@ -87,6 +91,8 @@ public class IntercityCourierController {
             true, null)
     );
 
+    // GET /api/intercity/couriers — list active couriers with optional filters
+    // by source city, destination city, and sort order (price / rating / speed).
     @GetMapping("/couriers")
     public ResponseEntity<List<IntercityCourierDTO>> getAllCouriers(
             @RequestParam(required = false) String fromCity,
@@ -97,6 +103,7 @@ public class IntercityCourierController {
                 .filter(IntercityCourierDTO::getIsActive)
                 .collect(Collectors.toList());
 
+        // Keep only couriers that serve the requested source city.
         if (fromCity != null && !fromCity.isBlank()) {
             String from = fromCity.trim().toLowerCase();
             result = result.stream()
@@ -105,6 +112,7 @@ public class IntercityCourierController {
                     .collect(Collectors.toList());
         }
 
+        // Same filter for the destination city.
         if (toCity != null && !toCity.isBlank()) {
             String to = toCity.trim().toLowerCase();
             result = result.stream()
@@ -113,11 +121,13 @@ public class IntercityCourierController {
                     .collect(Collectors.toList());
         }
 
+        // Apply the user's sort choice.
         if ("price".equals(sortBy)) {
             result.sort((a, b) -> a.getBasePrice().compareTo(b.getBasePrice()));
         } else if ("rating".equals(sortBy)) {
             result.sort((a, b) -> b.getRating().compareTo(a.getRating()));
         } else if ("speed".equals(sortBy)) {
+            // "estimatedDays" looks like "3-5" — compare by the lower number.
             result.sort((a, b) -> {
                 int daysA = Integer.parseInt(a.getEstimatedDays().split("-")[0]);
                 int daysB = Integer.parseInt(b.getEstimatedDays().split("-")[0]);
@@ -128,6 +138,7 @@ public class IntercityCourierController {
         return ResponseEntity.ok(result);
     }
 
+    // GET /api/intercity/couriers/{id} — fetch one courier by its ID.
     @GetMapping("/couriers/{id}")
     public ResponseEntity<IntercityCourierDTO> getCourierById(@PathVariable Integer id) {
         return COURIERS.stream()

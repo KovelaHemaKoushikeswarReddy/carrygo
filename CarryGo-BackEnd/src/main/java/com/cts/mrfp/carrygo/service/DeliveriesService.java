@@ -16,6 +16,9 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+// Business logic for the whole delivery lifecycle:
+// creating a request, finding matching porters, accepting/rejecting,
+// marking arrived, verifying OTP, and updating status to DELIVERED.
 @Service
 public class DeliveriesService {
 
@@ -27,17 +30,18 @@ public class DeliveriesService {
 
     // ── Create delivery ───────────────────────────────────────────────────────
 
+    // Saves a new delivery and broadcasts it to all online porters.
     public Deliveries saveDelivery(Deliveries delivery) {
         delivery.setCreatedAt(LocalDateTime.now());
         delivery.setStatus("PENDING");
 
-        // Generate 4-digit OTP for ride start
+        // Random 4-digit OTP that the sender will share with the porter at pickup.
         String otp = String.format("%04d", new Random().nextInt(10000));
         delivery.setOtp(otp);
 
         Deliveries saved = deliveriesRepo.save(delivery);
 
-        // Count matching porters for broadcast progress state
+        // Track how many porters were notified, so we can show a "searching for driver" progress UI.
         List<Users> matchingPorters = findMatchingPorters(saved);
         saved.setTotalPool(matchingPorters.size());
         saved.setTotalNotified(matchingPorters.size());
@@ -45,15 +49,15 @@ public class DeliveriesService {
         saved = deliveriesRepo.save(saved);
 
         DeliveriesDTO savedDTO = DTOConverter.convertDeliveriesToDTO(saved);
-        // Broadcast new ride request to ALL connected porters via WebSocket topic
+        // Live push: tell every connected porter about the new ride request.
         wsService.pushToPorters("rideRequest", savedDTO);
 
-        // Persist DB notifications for matched porters (catch-up for offline porters)
+        // Also save DB notifications so porters who are offline see it when they log back in.
         for (Users porter : matchingPorters) {
             sendNewRequestNotification(porter, saved);
         }
 
-        // Push initial broadcast state to sender
+        // Tell the sender's screen that the search has started.
         if (saved.getSender() != null) {
             wsService.push(saved.getSender().getUserId(), "broadcastUpdate",
                 buildBroadcastState(saved, false));
@@ -64,20 +68,20 @@ public class DeliveriesService {
 
     // ── Find matching online porters ──────────────────────────────────────────
 
+    // Returns porters who are online and don't already have a delivery in progress.
     private List<Users> findMatchingPorters(Deliveries delivery) {
         if (delivery.getPickupAddress() == null || delivery.getPickupAddress().isBlank()
          || delivery.getDropAddress()   == null || delivery.getDropAddress().isBlank()) {
             return java.util.Collections.emptyList();
         }
 
-        List<Users> available = usersRepo.findByIsOnlineTrue().stream()
+        return usersRepo.findByIsOnlineTrue().stream()
             .filter(u -> u.getRole() != null && u.getRole().contains("porter"))
             .filter(u -> !hasActiveDelivery(u.getUserId()))
             .collect(Collectors.toList());
-
-        return available;
     }
 
+    // True if this porter is still working on another delivery.
     private boolean hasActiveDelivery(Integer porterId) {
         return deliveriesRepo.findByCommuterUserId(porterId).stream()
             .anyMatch(d -> d.getStatus() != null &&
@@ -86,6 +90,8 @@ public class DeliveriesService {
 
     // ── Porter rejects a request (or timer expires) ───────────────────────────
 
+    // Increments the rejection count and updates the sender's search progress.
+    // Once every porter has rejected, the sender sees a "no drivers available" state.
     @Transactional
     public void rejectDelivery(Integer deliveryId, Integer commuterId) {
         Deliveries d = deliveriesRepo.findById(deliveryId).orElseThrow();
@@ -105,6 +111,7 @@ public class DeliveriesService {
 
     // ── Porter marks arrived at pickup ────────────────────────────────────────
 
+    // Moves the delivery to ARRIVED_AT_PICKUP and tells the sender to share the OTP.
     @Transactional
     public Deliveries markArrived(Integer deliveryId, Integer commuterId) {
         Deliveries d = deliveriesRepo.findById(deliveryId).orElseThrow();
@@ -126,6 +133,7 @@ public class DeliveriesService {
 
     // ── Verify OTP and start the ride ─────────────────────────────────────────
 
+    // The porter types the OTP the sender showed them. If it matches, the trip starts.
     @Transactional
     public Deliveries verifyOtp(Integer deliveryId, String enteredOtp) {
         Deliveries d = deliveriesRepo.findById(deliveryId).orElseThrow();
@@ -146,7 +154,7 @@ public class DeliveriesService {
         return saved;
     }
 
-    // ── Existing methods ──────────────────────────────────────────────────────
+    // ── Simple lookups ────────────────────────────────────────────────────────
 
     public List<Deliveries> getDeliveriesByUser(Integer userId) {
         return deliveriesRepo.findBySenderUserId(userId);
@@ -165,11 +173,15 @@ public class DeliveriesService {
             () -> new RuntimeException("Delivery not found: " + id));
     }
 
+    // Changes the delivery's status (PICKED_UP, DELIVERED, etc.) and notifies the sender.
+    // When DELIVERED, also pays the porter by adding the fare to their wallet.
     public Deliveries updateStatus(Integer id, String status) {
         Deliveries d = deliveriesRepo.findById(id).orElseThrow();
         d.setStatus(status);
         Deliveries saved = deliveriesRepo.save(d);
 
+        // Credit the porter's wallet on successful delivery.
+        // If the wallet update fails we still keep the new status — don't roll it back.
         if ("DELIVERED".equals(status) && d.getCommuter() != null) {
             float amount = (d.getTotalAmount() != null) ? d.getTotalAmount() : 50f;
             try { walletsService.updateBalance(d.getCommuter().getUserId(), amount); }
@@ -191,6 +203,8 @@ public class DeliveriesService {
         return saved;
     }
 
+    // A porter claims a pending delivery. First-come-first-served — the second
+    // porter who tries to accept will get a 409 from the controller.
     @Transactional
     public Deliveries acceptDelivery(Integer deliveryId, Integer commuterId) {
         Deliveries d = deliveriesRepo.findById(deliveryId).orElseThrow();
@@ -219,6 +233,7 @@ public class DeliveriesService {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    // Stores a "new ride request" notification for one porter.
     private void sendNewRequestNotification(Users porter, Deliveries delivery) {
         Notifications n = new Notifications();
         n.setUser(porter);
@@ -230,6 +245,7 @@ public class DeliveriesService {
         notificationsRepo.save(n);
     }
 
+    // Stores a status-change notification (e.g. "parcel picked up", "arrived") for the sender.
     private void sendStatusNotification(Users recipient, String message) {
         Notifications n = new Notifications();
         n.setUser(recipient);
@@ -239,6 +255,9 @@ public class DeliveriesService {
         n.setCreatedAt(LocalDateTime.now());
         notificationsRepo.save(n);
     }
+
+    // Builds the live "searching for driver" progress snapshot that the sender sees.
+    // Pool = total porters notified, rejected = how many declined or timed out.
     private Map<String, Object> buildBroadcastState(Deliveries d, boolean exhausted) {
         int pool       = d.getTotalPool()      != null ? d.getTotalPool()      : 0;
         int notified   = d.getTotalNotified()  != null ? d.getTotalNotified()  : 0;

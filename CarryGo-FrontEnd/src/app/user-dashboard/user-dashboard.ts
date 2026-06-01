@@ -53,6 +53,12 @@ type ActiveSection = 'home' | 'deliveries' | 'wallet' | 'services' | 'intercity'
 type PackageType   = 'documents' | 'electronics' | 'clothing' | 'fragile' | 'food' | 'other';
 type BookingStep   = 'idle' | 'estimated' | 'confirming-surge' | 'booked';
 
+// The main screen for regular users. Contains four sections in a sidebar:
+//   • Home — book a new parcel delivery
+//   • My Deliveries — past + current orders, with chat / cancel / rate
+//   • Wallet — balance, top-up, transaction history
+//   • Services / Intercity — third-party courier comparison
+// Real-time updates (status changes, chat messages) come in via SseService over WebSocket.
 @Component({
   selector: 'app-user-dashboard',
   standalone: true,
@@ -210,7 +216,7 @@ export class UserDashboard implements OnInit, OnDestroy {
   private inlineMapInstance: any = null;
   private leafletLib: any = null;
 
-  private readonly apiBase = 'https://carrygo-rxjj.onrender.com/api';
+  private readonly apiBase = 'http://localhost:8081/api';
 
   constructor(
     private authService:          AuthService,

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+// Chat endpoints for messages between the sender and the porter on a specific delivery.
 @RestController
 @RequestMapping("api/chat")
 @CrossOrigin(origins = "*")
@@ -16,13 +17,15 @@ public class ChatController {
 
     @Autowired private ChatService chatService;
 
-    /** Load full message history for a delivery (for both sides on open). */
+    // GET /api/chat/{deliveryId} — return all past messages for this delivery
+    // so the chat window can show the history when it opens.
     @GetMapping("/{deliveryId}")
     public List<ChatMessageDTO> getHistory(@PathVariable Integer deliveryId) {
         return chatService.getHistory(deliveryId);
     }
 
-    /** Send a message; broadcasts to /topic/chat/{deliveryId} via WebSocket. */
+    // POST /api/chat/{deliveryId}/send — save a new message and push it over
+    // WebSocket so the other side sees it immediately.
     @PostMapping("/{deliveryId}/send")
     public ResponseEntity<?> send(@PathVariable Integer deliveryId,
                                   @RequestBody Map<String, String> body) {

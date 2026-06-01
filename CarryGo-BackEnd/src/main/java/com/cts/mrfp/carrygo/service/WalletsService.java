@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
+// Handles wallet balance changes and records a transaction row each time.
 @Service
 public class WalletsService {
 
@@ -24,7 +25,7 @@ public class WalletsService {
     @Autowired
     private TransactionsRepository transactionsRepo;
 
-    /** Returns the wallet, auto-creating one with 0 balance if it doesn't exist yet. */
+    // Fetches the user's wallet. If they somehow don't have one yet, create it with 0 balance.
     public Wallets getOrCreateWallet(Integer userId) {
         return walletsRepo.findByUserUserId(userId).orElseGet(() -> {
             Users user = usersRepo.findById(userId)
@@ -41,6 +42,8 @@ public class WalletsService {
         return getOrCreateWallet(userId);
     }
 
+    // Internal helper used when paying a porter on DELIVERED.
+    // Doesn't record a transaction row — keep it lightweight.
     public Wallets updateBalance(Integer userId, Float amount) {
         Wallets wallet = getOrCreateWallet(userId);
         wallet.setBalance(wallet.getBalance() + amount);
@@ -48,6 +51,7 @@ public class WalletsService {
         return walletsRepo.save(wallet);
     }
 
+    // Adds money to the wallet and writes a CREDIT row to the transactions table.
     public Wallets topUp(Integer userId, Float amount) {
         Wallets wallet = getOrCreateWallet(userId);
         wallet.setBalance(wallet.getBalance() + amount);
@@ -65,7 +69,8 @@ public class WalletsService {
         return wallet;
     }
 
-    /** Deducts amount from wallet. Allows booking even if balance is insufficient (goes negative). */
+    // Removes money from the wallet and writes a DEBIT row.
+    // The balance is allowed to go negative so the user isn't blocked from booking.
     public Wallets deduct(Integer userId, Float amount) {
         Wallets wallet = getOrCreateWallet(userId);
         wallet.setBalance(wallet.getBalance() - amount);

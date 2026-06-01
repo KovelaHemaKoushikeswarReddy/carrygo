@@ -8,13 +8,12 @@ import { Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
+// One chat bubble in the conversation.
 interface Message { from: 'bot' | 'user'; text: string; time: string; }
+// A pre-canned button the user can tap instead of typing.
 interface QuickReply { label: string; action: string; }
 
-/* ══════════════════════════════════════════════════════════
-   🔑 GEMINI API KEY — paste yours between the quotes.
-   Get one free at https://aistudio.google.com/app/apikey
-   ══════════════════════════════════════════════════════════ */
+// Google Gemini API config. Free key from https://aistudio.google.com/app/apikey.
 const GEMINI_API_KEY = 'AIzaSyAgMocqoTnnvWWEhAgQ6Z12hTvlGpjS_dY';
 const GEMINI_MODEL   = 'gemini-2.5-flash-lite';
 const GEMINI_URL     = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent`;
@@ -42,7 +41,8 @@ const QUICK_REPLIES: QuickReply[] = [
 const OFFLINE_REPLY =
   "I'm having trouble reaching the AI right now 🤕\n\nPlease try again in a moment.";
 
-/* ── Maps the current route → short page description for the AI ── */
+// Turns the current URL into a one-line description we send to the AI
+// so it knows what screen the user is looking at.
 function describePage(url: string): string {
   if (url.includes('/login'))             return 'Login page';
   if (url.includes('/commuter-register')) return 'Commuter opt-in page';
@@ -56,7 +56,8 @@ function describePage(url: string): string {
   return 'CarryGo app';
 }
 
-/* ── System prompt sent to Gemini on every request ── */
+// Builds the long "system" prompt that tells Gemini how to behave on every request.
+// Contains everything about the CarryGo app the bot needs to answer questions accurately.
 function buildSystemPrompt(page: string, userName: string, userRole: string): string {
   const who = userName
     ? `The user is logged in as "${userName}"${userRole ? ` (role: ${userRole})` : ''}.`
@@ -148,6 +149,9 @@ fareRange = total ± 5%
 • Off-topic general questions (jokes, math, casual) → brief friendly answer, then steer back if needed.`;
 }
 
+// Floating chatbot widget that lives in the bottom-right corner.
+// Streams answers from Google Gemini in real time, giving the user help
+// based on which page they're currently looking at.
 @Component({
   selector: 'app-chatbot',
   standalone: true,
@@ -220,7 +224,8 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
     this.respondWithAI(action);
   }
 
-  /* ── Stream a reply from Gemini and render tokens as they arrive ── */
+  // Calls Gemini and shows the response as it streams in (token-by-token),
+  // so the user sees the bot "typing" instead of waiting for the full reply.
   private async respondWithAI(userText: string): Promise<void> {
     this.isTyping = true;
     this.cdr.detectChanges();

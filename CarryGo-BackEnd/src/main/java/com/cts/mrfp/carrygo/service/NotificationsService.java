@@ -8,22 +8,26 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+// Handles the in-app notification bell — creating, listing, and marking notifications as read.
 @Service
 public class NotificationsService {
 
     @Autowired
     private NotificationsRepository notificationsRepository;
 
+    // Saves a new notification with the current timestamp and "unread" set.
     public Notifications sendNotification(Notifications notification) {
         notification.setCreatedAt(LocalDateTime.now());
         notification.setIsRead(false);
         return notificationsRepository.save(notification);
     }
 
+    // Newest notifications first.
     public List<Notifications> getUserNotifications(Integer userId) {
         return notificationsRepository.findByUserUserIdOrderByCreatedAtDesc(userId);
     }
 
+    // Flips one notification's "read" flag to true.
     public void markAsRead(Integer notificationId) {
         notificationsRepository.findById(notificationId).ifPresent(n -> {
             n.setIsRead(true);

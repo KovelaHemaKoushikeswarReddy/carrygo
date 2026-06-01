@@ -3,6 +3,7 @@ package com.cts.mrfp.carrygo.model;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+// One row per wallet transaction. Type is "CREDIT" (top-up / payout) or "DEBIT" (payment).
 @Entity
 public class Transactions {
     @Id

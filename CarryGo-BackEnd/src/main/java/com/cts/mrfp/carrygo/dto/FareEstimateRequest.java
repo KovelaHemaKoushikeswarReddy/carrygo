@@ -1,11 +1,13 @@
 package com.cts.mrfp.carrygo.dto;
 
+// Input from the frontend when asking for a fare estimate.
 public class FareEstimateRequest {
     private Float pickupLat;
     private Float pickupLng;
     private Float dropLat;
     private Float dropLng;
-    private String vehicleType; // bike | auto | mini | sedan | suv
+    // One of: bike, auto, mini, sedan, suv
+    private String vehicleType;
 
     public FareEstimateRequest() {}
 

@@ -2,6 +2,7 @@ package com.cts.mrfp.carrygo.dto;
 
 import java.time.LocalDateTime;
 
+// JSON shape of a wallet — what the frontend sees on the wallet screen.
 public class WalletsDTO {
     private Integer walletId;
     private Integer userId;

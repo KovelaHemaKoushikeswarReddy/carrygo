@@ -1,5 +1,7 @@
 package com.cts.mrfp.carrygo.dto;
 
+// What we send back from the fare estimate endpoint — a full price breakdown
+// the frontend uses to show the user what they're about to pay.
 public class FareEstimateResponse {
     private float baseFare;
     private float distanceFare;
@@ -8,7 +10,7 @@ public class FareEstimateResponse {
     private String surgeLabel;
     private float zoneSurcharge;
     private float totalFare;
-    private String fareRange;
+    private String fareRange;       // e.g. "₹95 – ₹105"
     private float distanceKm;
     private int estimatedMinutes;
     private boolean hasSurge;

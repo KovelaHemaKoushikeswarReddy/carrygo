@@ -35,6 +35,8 @@ interface WalletData {
 
 type FilterTab = 'all' | 'active' | 'completed' | 'cancelled';
 
+// Porter "My Deliveries" page — shows every delivery the porter has touched,
+// with tabs to filter by All / Active / Completed / Cancelled, plus a search box.
 @Component({
   selector: 'porter-deliveries',
   standalone: true,
@@ -62,7 +64,7 @@ export class PorterDeliveriesComponent implements OnInit {
 
   counts = { all: 0, active: 0, completed: 0, cancelled: 0 };
 
-  private readonly apiBase = 'https://carrygo-rxjj.onrender.com/api';
+  private readonly apiBase = 'http://localhost:8081/api';
 
   constructor(
     private authService: AuthService,

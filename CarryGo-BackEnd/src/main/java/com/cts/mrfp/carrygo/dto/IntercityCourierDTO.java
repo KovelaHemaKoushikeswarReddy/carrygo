@@ -2,6 +2,8 @@ package com.cts.mrfp.carrygo.dto;
 
 import java.util.List;
 
+// JSON shape for one intercity courier shown on the comparison screen
+// (logo, pricing, supported cities, rating, etc.).
 public class IntercityCourierDTO {
 
     private Integer id;

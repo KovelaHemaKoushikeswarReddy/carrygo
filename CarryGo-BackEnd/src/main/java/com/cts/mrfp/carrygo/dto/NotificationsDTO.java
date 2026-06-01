@@ -3,6 +3,7 @@ package com.cts.mrfp.carrygo.dto;
 import java.time.LocalDateTime;
 import jakarta.validation.constraints.NotBlank;
 
+// JSON shape of a notification when listed in the bell icon UI.
 public class NotificationsDTO {
     private Integer notificationId;
     private Integer userId;

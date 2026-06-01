@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+// Endpoints for the rating system — after a delivery is completed,
+// the sender can rate the porter (1-5 stars + optional comment).
 @RestController
 @RequestMapping("/api/ratings")
 @CrossOrigin(origins = "*")
@@ -18,8 +20,10 @@ public class RatingsController {
     @Autowired
     private RatingsService ratingsService;
 
+    // POST /api/ratings — save a new rating for a completed delivery.
     @PostMapping
     public ResponseEntity<?> addRating(@RequestBody RatingsDTO ratingDTO) {
+        // Make sure the client sent everything we need.
         if (ratingDTO.getDeliveryId() == null
                 || ratingDTO.getSenderId()   == null
                 || ratingDTO.getCommuterId() == null
@@ -32,8 +36,8 @@ public class RatingsController {
             ratingDTO.setRatingId(added.getRatingId());
             ratingDTO.setCreatedAt(added.getCreatedAt());
 
-            // Best-effort: update the commuter's average rating.
-            // If this fails (e.g. schema not yet migrated) the rating is already saved.
+            // After saving the rating, refresh the porter's running average.
+            // If this fails we swallow it — the main rating is already saved.
             try {
                 ratingsService.updateCommuterAvgRating(ratingDTO.getCommuterId());
             } catch (Exception ignored) {}
@@ -45,17 +49,21 @@ public class RatingsController {
         }
     }
 
+    // GET /api/ratings/commuter/{commuterId} — every rating a porter has received.
     @GetMapping("/commuter/{commuterId}")
     public ResponseEntity<List<RatingsDTO>> getCommuterRatings(@PathVariable Integer commuterId) {
         return ResponseEntity.ok(ratingsService.getRatingsByCommuter(commuterId));
     }
 
+    // GET /api/ratings/commuter/{commuterId}/average — the porter's average star rating.
     @GetMapping("/commuter/{commuterId}/average")
     public ResponseEntity<Map<String, Object>> getAvgRating(@PathVariable Integer commuterId) {
         Double avg = ratingsService.getAvgRating(commuterId);
         return ResponseEntity.ok(Map.of("avgRating", avg != null ? avg : 0.0));
     }
 
+    // GET /api/ratings/delivery/{deliveryId}/exists — was this delivery already rated?
+    // The frontend hides the "Rate" button if so.
     @GetMapping("/delivery/{deliveryId}/exists")
     public ResponseEntity<Map<String, Boolean>> isDeliveryRated(@PathVariable Integer deliveryId) {
         boolean rated = ratingsService.isDeliveryRated(deliveryId);

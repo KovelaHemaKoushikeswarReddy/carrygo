@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import jakarta.validation.constraints.NotBlank;
 
+// JSON shape of a delivery — used for both incoming requests (booking)
+// and outgoing responses (status, listings, dashboard).
 public class DeliveriesDTO {
     private Integer deliveryId;
     

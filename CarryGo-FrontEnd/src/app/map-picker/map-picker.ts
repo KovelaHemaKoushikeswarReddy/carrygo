@@ -20,6 +20,10 @@ export interface MapPickerResult {
   durationMin:   number;
 }
 
+// Reusable map dialog that lets the user pick pickup and drop locations on a map.
+// Uses Leaflet for the map, Nominatim for address search, and OSRM for the route.
+// Parent components show/hide it with the [isOpen] input, and listen for the result
+// on (confirmed) or a close on (cancelled).
 @Component({
   selector: 'app-map-picker',
   standalone: true,
@@ -29,10 +33,12 @@ export interface MapPickerResult {
 })
 export class MapPickerComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
 
-  /** Parent controls visibility — no *ngIf needed on the host */
+  // Whether the dialog is visible — controlled by the parent component.
   @Input() isOpen = false;
 
+  // Fires with both addresses + coords + distance when the user clicks Confirm.
   @Output() confirmed = new EventEmitter<MapPickerResult>();
+  // Fires when the user closes the dialog without picking.
   @Output() cancelled = new EventEmitter<void>();
 
   @ViewChild('mapEl') mapElRef!: ElementRef<HTMLDivElement>;

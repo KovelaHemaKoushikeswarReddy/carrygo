@@ -14,6 +14,8 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Optional;
 
+// Business logic for user-related actions: registration, login, profile updates,
+// going online/offline, and upgrading a regular user into a porter.
 @Service
 public class UsersService {
     private final UsersRepository usersRepository;
@@ -25,14 +27,15 @@ public class UsersService {
         this.usersRepository = usersRepository;
     }
 
-    // "commuter" is just the UI label for a porter — treat them as the same role everywhere.
+    // The frontend sometimes sends "commuter", which is just the UI word for a porter.
+    // We treat both as the same internal role.
     private static String normalizeRole(String role) {
         if (role == null) return "user";
         String r = role.trim().toLowerCase();
         return r.equals("commuter") ? "porter" : r;
     }
 
-    // Registration
+    // Creates a new user and automatically gives them an empty wallet.
     public Users register(Users users) {
         if (users.getPassword() == null || users.getPassword().isBlank()) {
             throw new IllegalArgumentException("Password is required");
@@ -42,7 +45,7 @@ public class UsersService {
         users.setRole(normalizeRole(users.getRole()));
         Users saved = usersRepository.save(users);
 
-        // Auto-create wallet with 0 balance for every new user
+        // Every new user gets a wallet with a 0 balance so we can credit/debit them later.
         Wallets wallet = new Wallets();
         wallet.setUser(saved);
         wallet.setBalance(0f);
@@ -52,7 +55,8 @@ public class UsersService {
         return saved;
     }
 
-    // Login with email + password + role
+    // Checks email + password and confirms the user actually has the requested role.
+    // A user record can hold multiple roles, e.g. "user,porter".
     public Optional<Users> login(String email, String password, String role) {
         String normalizedEmail = email.trim();
         String normalizedPassword = password.trim();
@@ -60,25 +64,23 @@ public class UsersService {
 
         Optional<Users> user = usersRepository.findByEmailAndPassword(normalizedEmail, normalizedPassword);
 
-        // Validate role: supports comma-separated roles e.g. "user,porter".
-        // Each stored token is normalized too so legacy "commuter" rows still match.
+        // The role column may contain a comma-separated list like "user,porter".
+        // Split it and confirm at least one token matches the role the user logged in with.
         return user.filter(u -> u.getRole() != null &&
                 Arrays.stream(u.getRole().split(","))
                       .map(UsersService::normalizeRole)
                       .anyMatch(r -> r.equals(normalizedRole)));
     }
 
-    // Retrieve user by ID
     public Optional<Users> getUserById(Integer userId) {
         return usersRepository.findById(userId);
     }
 
-    // Retrieve user by email
     public Optional<Users> getUserByEmail(String email) {
         return usersRepository.findByEmail(email.trim());
     }
 
-    // Update user online/offline status
+    // Flips the porter's "online" flag. Only online porters receive new ride requests.
     public Optional<Users> updateUserStatus(Integer userId, Boolean isOnline) {
         Optional<Users> user = usersRepository.findById(userId);
         if (user.isPresent()) {
@@ -89,12 +91,13 @@ public class UsersService {
         return user;
     }
 
-    // Register existing user as a commuter (adds "porter" role, stores vehicle/licence info)
+    // Adds the "porter" role to an existing user and saves their vehicle / licence details
+    // so they can start accepting deliveries.
     public Optional<Users> registerAsCommuter(Integer userId, CommuterRegistrationRequest req) {
         Optional<Users> existing = usersRepository.findById(userId);
         if (existing.isPresent()) {
             Users u = existing.get();
-            // Add porter role if not already present
+            // Append "porter" to the existing role string unless it's already there.
             String currentRole = u.getRole() != null ? u.getRole().trim() : "user";
             boolean alreadyPorter = Arrays.stream(currentRole.split(","))
                     .map(String::trim)
@@ -107,7 +110,7 @@ public class UsersService {
             if (req.getVehicleModel()  != null) u.setVehicleModel(req.getVehicleModel());
             if (req.getLicenceNumber() != null) u.setLicenceNumber(req.getLicenceNumber());
             if (req.getLicenceExpiry() != null) {
-                u.setLicenceExpiry(LocalDate.parse(req.getLicenceExpiry())); // "YYYY-MM-DD"
+                u.setLicenceExpiry(LocalDate.parse(req.getLicenceExpiry()));
             }
             usersRepository.save(u);
             return Optional.of(u);
@@ -115,7 +118,8 @@ public class UsersService {
         return Optional.empty();
     }
 
-    // Update user KYC / profile fields (patch-style, only non-null fields)
+    // Updates the user's profile / KYC details. Only the fields that the
+    // request actually sent get changed — null fields are left alone.
     public Optional<Users> updateUserProfile(Integer userId, UsersDTO dto) {
         Optional<Users> existing = usersRepository.findById(userId);
         if (existing.isPresent()) {
@@ -127,23 +131,23 @@ public class UsersService {
             if (dto.getVehicleModel()       != null) u.setVehicleModel(dto.getVehicleModel());
             if (dto.getLicenceNumber()      != null) u.setLicenceNumber(dto.getLicenceNumber());
             if (dto.getLicenceExpiry()      != null) u.setLicenceExpiry(dto.getLicenceExpiry());
-            // KYC personal
+            // Personal details
             if (dto.getGender()             != null) u.setGender(dto.getGender());
             if (dto.getDateOfBirth()        != null) u.setDateOfBirth(dto.getDateOfBirth());
             if (dto.getIdType()             != null) u.setIdType(dto.getIdType());
             if (dto.getIdNumber()           != null) u.setIdNumber(dto.getIdNumber());
-            // KYC address
+            // Address
             if (dto.getHouseNo()            != null) u.setHouseNo(dto.getHouseNo());
             if (dto.getStreet()             != null) u.setStreet(dto.getStreet());
             if (dto.getCity()               != null) u.setCity(dto.getCity());
             if (dto.getState()              != null) u.setState(dto.getState());
             if (dto.getPinCode()            != null) u.setPinCode(dto.getPinCode());
-            // KYC bank
+            // Bank account (for porter payouts)
             if (dto.getBankAccountHolder()  != null) u.setBankAccountHolder(dto.getBankAccountHolder());
             if (dto.getBankAccountNumber()  != null) u.setBankAccountNumber(dto.getBankAccountNumber());
             if (dto.getBankIfscCode()       != null) u.setBankIfscCode(dto.getBankIfscCode());
             if (dto.getBankName()           != null) u.setBankName(dto.getBankName());
-            // KYC status & images
+            // KYC verification status + ID images
             if (dto.getKycStatus()          != null) u.setKycStatus(dto.getKycStatus());
             if (dto.getIdFrontImage()       != null) u.setIdFrontImage(dto.getIdFrontImage());
             if (dto.getIdBackImage()        != null) u.setIdBackImage(dto.getIdBackImage());

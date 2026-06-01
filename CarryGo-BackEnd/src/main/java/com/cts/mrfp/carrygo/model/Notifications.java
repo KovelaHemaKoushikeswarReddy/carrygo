@@ -3,6 +3,7 @@ package com.cts.mrfp.carrygo.model;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+// One row per in-app notification (the bell icon list).
 @Entity
 public class Notifications {
     @Id

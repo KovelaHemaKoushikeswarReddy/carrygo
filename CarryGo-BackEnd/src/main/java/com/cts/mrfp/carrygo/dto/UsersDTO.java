@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
+// JSON shape of a user — sent in register/login responses, profile updates,
+// and anywhere the frontend needs to display the current logged-in user's info.
 public class UsersDTO {
     private Integer userId;
     

@@ -9,6 +9,8 @@ import { PorterStatusService } from '../services/porter-status.service';
 import { of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
+// All fields collected across the 6 KYC steps.
+// Each block matches one step of the multi-step form on the screen.
 export interface KycFormData {
   // Step 1 – Personal
   fullName: string;
@@ -16,32 +18,32 @@ export interface KycFormData {
   gender: string;
   phone: string;
   email: string;
-  // Step 2 – Identity
+  // Step 2 – Identity (ID type, number, and front/back photos)
   idType: string;
   idNumber: string;
   idFrontFile: File | null;
   idBackFile:  File | null;
   idFrontPreview: string;
   idBackPreview:  string;
-  // Step 3 – Address
+  // Step 3 – Residential address
   houseNo: string;
   street: string;
   city: string;
   state: string;
   pinCode: string;
-  // Step 4 – Vehicle
+  // Step 4 – Vehicle and driving licence
   vehicleType: string;
   vehicleModel: string;
   vehicleRegNo: string;
   licenceNumber: string;
   licenceExpiry: string;
-  // Step 5 – Bank
+  // Step 5 – Bank details for payouts
   accountHolder: string;
   accountNumber: string;
   confirmAccount: string;
   ifscCode: string;
   bankName: string;
-  // Step 6 – Legal
+  // Step 6 – Legal agreement
   agreedTerms: boolean;
   agreedAccuracy: boolean;
 }
@@ -51,6 +53,9 @@ interface StepConfig {
   icon: string;
 }
 
+// Porter KYC screen — a 6-step wizard that collects everything we need to verify
+// the porter (personal info, government ID, address, vehicle, bank, legal).
+// The "Review" step at the end submits the full form to the backend.
 @Component({
   selector: 'porter-kyc',
   standalone: true,
@@ -114,7 +119,7 @@ export class PorterKycComponent implements OnInit {
     agreedTerms: false, agreedAccuracy: false
   };
 
-  private readonly apiBase = 'https://carrygo-rxjj.onrender.com/api';
+  private readonly apiBase = 'http://localhost:8081/api';
 
   constructor(
     private authService: AuthService,

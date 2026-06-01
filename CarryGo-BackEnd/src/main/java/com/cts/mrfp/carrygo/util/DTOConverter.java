@@ -1,6 +1,5 @@
 package com.cts.mrfp.carrygo.util;
 
- 
 import com.cts.mrfp.carrygo.dto.*;
 import com.cts.mrfp.carrygo.model.Deliveries;
 import com.cts.mrfp.carrygo.model.Notifications;
@@ -9,12 +8,11 @@ import com.cts.mrfp.carrygo.model.Transactions;
 import com.cts.mrfp.carrygo.model.Users;
 import com.cts.mrfp.carrygo.model.Wallets;
 
-/**
- * Utility class for converting between Entity and DTO objects
- */
+// Helpers that copy data between database entity classes and the DTO classes we send over HTTP.
+// Doing this conversion by hand keeps the API response shape stable even if the entity changes.
 public class DTOConverter {
 
-    // Users conversions
+    // ── Users ────────────────────────────────────────────────────────────────
     public static UsersDTO convertUsersToDTO(Users user) {
         if (user == null) {
             return null;
@@ -61,7 +59,7 @@ public class DTOConverter {
         return user;
     }
 
-    // Deliveries conversions
+    // ── Deliveries ───────────────────────────────────────────────────────────
     public static DeliveriesDTO convertDeliveriesToDTO(Deliveries delivery) {
         if (delivery == null) {
             return null;
@@ -99,14 +97,15 @@ public class DTOConverter {
             delivery.getStatus(),
             delivery.getCreatedAt()
         );
-        // Attach accepted porter's details so the user dashboard can display them
+        // Flatten the porter's basic info into the DTO so the user dashboard
+        // doesn't have to make a second call to fetch their name / phone / vehicle.
         if (delivery.getCommuter() != null) {
             dto.setCommuterName(delivery.getCommuter().getName());
             dto.setCommuterPhone(delivery.getCommuter().getPhone());
             dto.setCommuterVehicle(delivery.getCommuter().getVehicleType());
         }
 
-        // Dynamic pricing + OTP + broadcast fields
+        // Surge pricing details, OTP, and the "searching for driver" counters.
         dto.setOtp(delivery.getOtp());
         dto.setSurgeMultiplier(delivery.getSurgeMultiplier());
         dto.setSurgeLabel(delivery.getSurgeLabel());
@@ -120,7 +119,7 @@ public class DTOConverter {
         return dto;
     }
 
-    // Wallets conversions
+    // ── Wallets ──────────────────────────────────────────────────────────────
     public static WalletsDTO convertWalletsToDTO(Wallets wallet) {
         if (wallet == null) {
             return null;
@@ -135,7 +134,7 @@ public class DTOConverter {
         );
     }
 
-    // Transactions conversions
+    // ── Transactions ─────────────────────────────────────────────────────────
     public static TransactionsDTO convertTransactionsToDTO(Transactions transaction) {
         if (transaction == null) {
             return null;
@@ -154,7 +153,7 @@ public class DTOConverter {
         );
     }
 
-    // Ratings conversions
+    // ── Ratings ──────────────────────────────────────────────────────────────
     public static RatingsDTO convertRatingsToDTO(Ratings rating) {
         if (rating == null) {
             return null;
@@ -174,7 +173,7 @@ public class DTOConverter {
         );
     }
 
-    // Notifications conversions
+    // ── Notifications ────────────────────────────────────────────────────────
     public static NotificationsDTO convertNotificationsToDTO(Notifications notification) {
         if (notification == null) {
             return null;

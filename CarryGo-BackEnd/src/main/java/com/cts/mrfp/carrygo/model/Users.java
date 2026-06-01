@@ -10,6 +10,8 @@ import jakarta.persistence.Id;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
+// Database table for every person on the platform — regular users and porters alike.
+// One column "role" can hold multiple roles (e.g. "user,porter") when a user signs up as a porter.
 @Entity
 public class Users {
     @Id
@@ -17,23 +19,24 @@ public class Users {
     @Column(name="user_id")
     private Integer userId;
 
-
-
-
     @NotBlank
     private String name;
+
     @Email
     @Column(unique = true)
     private String email;
 
     @NotBlank
     private String phone;
+
     @NotBlank
     private String password;
+
     private String role;
     private String authProvider;
     private String themePreference;
 
+    // Porter-only fields — only set after the user registers as a porter.
     private String licenceNumber;
     private LocalDate licenceExpiry;
     private String vehicleType;
@@ -42,28 +45,29 @@ public class Users {
     private Boolean isOnline = false;
     private Double avgRating;
 
-    // KYC personal
+    // KYC — personal info the porter must submit before they can take rides.
     private String gender;
     private String dateOfBirth;
     private String idType;
     private String idNumber;
 
-    // KYC address
+    // KYC — residential address.
     private String houseNo;
     private String street;
     private String city;
     private String state;
     private String pinCode;
 
-    // KYC bank
+    // KYC — bank account where payouts will go.
     private String bankAccountHolder;
     private String bankAccountNumber;
     private String bankIfscCode;
     private String bankName;
 
-    // KYC status & document images (stored as Base64)
+    // Overall KYC verification status (PENDING / APPROVED / REJECTED).
     private String kycStatus;
 
+    // ID card images stored as Base64 strings. MEDIUMTEXT keeps each one in MySQL.
     @Column(columnDefinition = "MEDIUMTEXT")
     private String idFrontImage;
 

@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Max;
 
+// JSON shape of a rating, used both as request body (when posting a new rating)
+// and as response body (when listing a porter's ratings).
 public class RatingsDTO {
     private Integer ratingId;
     private Integer deliveryId;

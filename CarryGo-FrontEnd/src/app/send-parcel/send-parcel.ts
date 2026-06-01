@@ -29,6 +29,8 @@ export interface LocationSuggestion {
 const HISTORY_KEY = 'carrygo_location_history';
 const MAX_HISTORY  = 10;
 
+// Standalone "Send a Parcel" page. The user picks pickup + drop locations,
+// chooses a vehicle and package details, gets a fare estimate, and books the delivery.
 @Component({
   selector: 'app-send-parcel',
   standalone: true,

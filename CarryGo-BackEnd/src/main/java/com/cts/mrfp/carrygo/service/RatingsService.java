@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+// Handles porter ratings — saving a new rating and keeping the porter's average up to date.
 @Service
 public class RatingsService {
 
@@ -27,11 +28,9 @@ public class RatingsService {
     @PersistenceContext
     private EntityManager em;
 
-    /**
-     * Saves a new rating. Uses getReference() for FK associations so no SELECT
-     * is executed against the users/deliveries tables — avoids any column-not-found
-     * errors if schema migrations haven't run yet.
-     */
+    // Saves a rating row tied to a delivery, the sender, and the porter.
+    // We use em.getReference() instead of findById() so JPA doesn't run an
+    // extra SELECT just to confirm the foreign-key rows exist.
     @Transactional
     public Ratings addRating(RatingsDTO dto) {
         Deliveries delivery = em.getReference(Deliveries.class, dto.getDeliveryId());
@@ -49,11 +48,8 @@ public class RatingsService {
         return ratingsRepository.save(rating);
     }
 
-    /**
-     * Recalculates and persists the commuter's average rating.
-     * Called after addRating — kept separate so a failure here never
-     * rolls back the already-committed rating insert.
-     */
+    // Recalculates a porter's running average and writes it back on the users table
+    // so we don't have to recompute on every read.
     @Transactional
     public void updateCommuterAvgRating(Integer commuterId) {
         Double avg = ratingsRepository.findAvgRatingByCommuterId(commuterId);
@@ -62,6 +58,7 @@ public class RatingsService {
         usersRepository.updateAvgRating(commuterId, rounded);
     }
 
+    // Returns the porter's current average, rounded to 1 decimal.
     public Double getAvgRating(Integer commuterId) {
         Double avg = ratingsRepository.findAvgRatingByCommuterId(commuterId);
         if (avg == null) return null;
@@ -72,6 +69,7 @@ public class RatingsService {
         return ratingsRepository.findDTOsByCommuterId(commuterId);
     }
 
+    // Used by the frontend to decide whether to show the "Rate" button.
     public boolean isDeliveryRated(Integer deliveryId) {
         return ratingsRepository.existsByDelivery_DeliveryId(deliveryId);
     }

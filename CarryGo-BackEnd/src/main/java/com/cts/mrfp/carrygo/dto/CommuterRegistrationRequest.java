@@ -1,16 +1,15 @@
 package com.cts.mrfp.carrygo.dto;
 
-/**
- * Payload for POST https://carrygo-production.up.railway.app/api/users/{userId}/register-commuter.
- * Uses a plain String for licenceExpiry ("YYYY-MM-DD") to avoid
- * Jackson LocalDate deserialization issues across versions.
- */
+// Body the frontend sends when a regular user signs up as a porter
+// (POST /api/users/{userId}/register-commuter).
+// licenceExpiry is sent as a plain "YYYY-MM-DD" string so we don't run into
+// LocalDate JSON-parsing quirks.
 public class CommuterRegistrationRequest {
     private String vehicleType;
     private String vehicleNumber;
     private String vehicleModel;
     private String licenceNumber;
-    private String licenceExpiry;   // "YYYY-MM-DD"
+    private String licenceExpiry;
 
     public String getVehicleType()   { return vehicleType; }
     public void setVehicleType(String vehicleType) { this.vehicleType = vehicleType; }

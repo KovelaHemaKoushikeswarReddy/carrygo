@@ -5,6 +5,8 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { timeout, TimeoutError } from 'rxjs';
 
+// Login screen — collects email/password/role, calls AuthService.login,
+// then routes the user to the dashboard that matches their role.
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -13,38 +15,35 @@ import { timeout, TimeoutError } from 'rxjs';
   styleUrl: './login.css'
 })
 export class Login {
+  // Bound to the form fields in login.html.
   loginData = {
     email: '',
     password: '',
     role: 'user'
   };
 
-  isLoading = false;
-  showPassword = false;
+  isLoading = false;       // disables the submit button while the request is in flight
+  showPassword = false;    // toggles the eye icon to show/hide the password
 
   constructor(
     private authService: AuthService,
     private router: Router
   ) {}
 
+  // Triggered when the login form is submitted.
   onSubmit() {
     this.isLoading = true;
 
+    // Give the request 8 seconds before treating it as a timeout.
     this.authService.login(this.loginData).pipe(timeout(8000)).subscribe({
       next: (response) => {
-        console.log('Login successful', response);
         this.isLoading = false;
 
-        // Use the response directly instead of getCurrentUser()
+        // Send the user to the right dashboard based on their role.
         if (response && response.userId) {
-          console.log('User role:', response.role);
-          
-          // Route based on role from response
           if (response.role === 'porter' || response.role === 'commuter') {
-            console.log('Routing to porter-dashboard');
             this.router.navigate(['/porter-dashboard', response.userId]);
           } else {
-            console.log('Routing to user-dashboard');
             this.router.navigate(['/user-dashboard', response.userId]);
           }
         } else {
@@ -53,6 +52,7 @@ export class Login {
       },
       error: (err) => {
         this.isLoading = false;
+        // Show a friendly message depending on what went wrong.
         if (err instanceof TimeoutError) {
           alert('Request timed out. Please check your connection and try again.');
         } else if (err.status === 401 || err.status === 403) {
@@ -67,6 +67,7 @@ export class Login {
     });
   }
 
+  // Flips between the "I'm a user" and "I'm a porter" tabs on the form.
   switchRole() {
     this.loginData.role = this.loginData.role === 'user' ? 'porter' : 'user';
   }

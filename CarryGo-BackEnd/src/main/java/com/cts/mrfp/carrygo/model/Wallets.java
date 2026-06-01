@@ -3,6 +3,7 @@ package com.cts.mrfp.carrygo.model;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+// One wallet per user. Tracks the running balance for in-app payments and porter payouts.
 @Entity
 public class Wallets {
     @Id

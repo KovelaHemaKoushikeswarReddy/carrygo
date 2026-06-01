@@ -45,6 +45,8 @@ interface EditVehicleForm {
   licenceExpiry: string;
 }
 
+// Porter profile screen — shows the porter's personal info, vehicle details,
+// wallet balance, lifetime stats, and lets them edit personal / vehicle fields.
 @Component({
   selector: 'porter-profile',
   standalone: true,
@@ -96,7 +98,7 @@ export class PorterProfileComponent implements OnInit {
     flexibleSchedule: true,
   };
 
-  private readonly apiBase = 'https://carrygo-rxjj.onrender.com/api';
+  private readonly apiBase = 'http://localhost:8081/api';
 
   constructor(
     private authService: AuthService,

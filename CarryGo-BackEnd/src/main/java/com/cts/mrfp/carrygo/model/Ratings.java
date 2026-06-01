@@ -3,6 +3,7 @@ package com.cts.mrfp.carrygo.model;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+// One row per rating a sender leaves for the porter after a completed delivery.
 @Entity
 public class Ratings {
     @Id

@@ -2,6 +2,7 @@ package com.cts.mrfp.carrygo.dto;
 
 import java.time.LocalDateTime;
 
+// JSON shape of a chat message as sent to and from the frontend.
 public class ChatMessageDTO {
     private Long id;
     private Integer deliveryId;

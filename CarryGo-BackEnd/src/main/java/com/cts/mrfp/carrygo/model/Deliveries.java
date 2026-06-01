@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+// One row per delivery. Links a sender (who books the trip) to a commuter / porter (who fulfils it),
+// and tracks status from PENDING → ACCEPTED → ARRIVED_AT_PICKUP → PICKED_UP → DELIVERED.
 @Entity
 public class Deliveries {
     @Id
@@ -11,55 +13,67 @@ public class Deliveries {
     @Column(name="delivery_id")
     private Integer deliveryId;
 
+    // The user who created the request.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sender_id")
     private Users sender;
 
+    // The porter who accepted it. Null until someone accepts.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "commuter_id")
     private Users commuter;
 
+    // Pickup details (address + GPS + contact).
     private String pickupAddress;
     private Float pickupLat;
     private Float pickupLng;
     private String pickupContact;
     private String pickupPhone;
+
+    // Drop-off details.
     private String dropAddress;
     private Float dropLat;
     private Float dropLng;
     private String receiverName;
     private String receiverPhone;
+
+    // What is being shipped.
     private String packageType;
     private Float weightKg;
     private String packageSize;
     private String specialInstructions;
+
+    // Scheduling.
     private String deliveryType;
     private LocalDate preferredDate;
     private String preferredTime;
     private Boolean flexibleMatching;
+
+    // Pricing breakdown shown to the user.
     private Float distanceKm;
     private Float basePrice;
     private Float distanceCost;
     private Float serviceFee;
     private Float totalAmount;
+
     private String status;
     private LocalDateTime createdAt;
 
-    // OTP & ride flow
+    // OTP that the sender shares with the porter at pickup.
     private String otp;
     private LocalDateTime arrivedAt;
 
-    // Dynamic pricing metadata
+    // Extra pricing details captured at the moment the booking was made.
     private Float surgeMultiplier;
     private String surgeLabel;
     private Float zoneSurcharge;
     private Float timeFare;
     private String vehicleType;
 
-    // Broadcast tracking
-    private Integer totalPool;
-    private Integer totalNotified;
-    private Integer totalRejected;
+    // Counters for the "searching for driver" UI on the sender's screen.
+    private Integer totalPool;       // total porters initially notified
+    private Integer totalNotified;   // currently notified
+    private Integer totalRejected;   // how many rejected / let the timer expire
 
     public Deliveries() {}
 

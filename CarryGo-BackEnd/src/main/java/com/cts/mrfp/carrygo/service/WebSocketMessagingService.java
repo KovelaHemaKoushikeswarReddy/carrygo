@@ -6,6 +6,8 @@ import org.springframework.stereotype.Service;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+// Thin wrapper around Spring's WebSocket messaging template.
+// Other services call these methods to send real-time updates to the frontend.
 @Service
 public class WebSocketMessagingService {
 
@@ -15,21 +17,22 @@ public class WebSocketMessagingService {
         this.messagingTemplate = messagingTemplate;
     }
 
-    /** Broadcast a new ride request to ALL connected porters. */
+    // Tells every online porter that there's a new ride request.
     public void pushToPorters(String eventName, Object payload) {
         messagingTemplate.convertAndSend("/topic/new-orders", (Object) wrap(eventName, payload));
     }
 
-    /** Send a personal event to a specific user (sender or porter). */
+    // Sends a private event to one user (delivery status, broadcast progress, etc.).
     public void push(Integer userId, String eventName, Object payload) {
         messagingTemplate.convertAndSend("/topic/user/" + userId, (Object) wrap(eventName, payload));
     }
 
-    /** Broadcast a chat message to both parties in a delivery chat room. */
+    // Pushes a chat message to everyone subscribed to that delivery's chat room.
     public void pushToChat(Integer deliveryId, Object payload) {
         messagingTemplate.convertAndSend("/topic/chat/" + deliveryId, (Object) wrap("chatMessage", payload));
     }
 
+    // Wraps every payload as { event, data } so the client can switch on the event name.
     private Map<String, Object> wrap(String eventName, Object payload) {
         Map<String, Object> msg = new LinkedHashMap<>();
         msg.put("event", eventName);
